@@ -71,6 +71,6 @@ try:
     from banks_aktau import get_aktau_rates
     df_banks = get_aktau_rates()
     st.dataframe(df_banks, use_container_width=True, hide_index=True)
-    st.caption("Продаешь USD - смотри на самую высокую ПОКУПКУ. Покупаешь USD - смотри на самую низкую ПРОДАЖУ. Данные: kurs.kz")
+    st.caption("Продаешь USD - смотри на самую высокую ПОКУПКУ. Покупаешь USD - смотри на самую низкую ПРОДАЖУ")
 except Exception as e:
     st.info("Не удалось загрузить курсы обменников, попробуй обновить страницу")
