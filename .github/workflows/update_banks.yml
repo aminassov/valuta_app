@@ -1,0 +1,23 @@
+name: Update Aktau Banks
+
+on:
+  schedule:
+    - cron: '0 4 * * *'  # 09:00 по Актау
+  workflow_dispatch:
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      - run: pip install requests beautifulsoup4 pandas
+      - run: python fetch_banks.py
+      - run: |
+          git config user.name "bot"
+          git config user.email "bot@bot.com"
+          git add banks_aktau.csv
+          git commit -m "update banks" || echo "no changes"
+          git push
