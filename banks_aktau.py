@@ -3,7 +3,7 @@ from bs4 import BeautifulSoup
 import pandas as pd
 
 def get_aktau_rates():
-    # Пробуем взять реальные курсы обменников Актау с kurs.kz
+   
     try:
         url = "https://kurs.kz/aktau"
         headers = {"User-Agent": "Mozilla/5.0"}
@@ -11,7 +11,7 @@ def get_aktau_rates():
         soup = BeautifulSoup(r.text, "html.parser")
         
         rows = []
-        # Ищем таблицу с курсами
+        
         for table in soup.find_all("table"):
             for tr in table.find_all("tr")[1:]:
                 tds = [td.get_text(strip=True) for td in tr.find_all("td")]
@@ -30,7 +30,6 @@ def get_aktau_rates():
     except Exception as e:
         pass
 
-    # Если сайт не дал данные - показываем ориентир по Нацбанку
     return pd.DataFrame([
         {"Обменник": "Обменники Актау (средний)", "Покупка USD": "444.50", "Продажа USD": "445.80"},
         {"Обменник": "Kaspi / Банки (в приложении)", "Покупка USD": "443.50", "Продажа USD": "446.50"},
