@@ -39,13 +39,18 @@ st.dataframe(df, use_container_width=True, hide_index=True)
 st.divider()
 st.subheader("Калькулятор")
 
-amount = st.number_input("Сумма в тенге:", min_value=0.0, value=10000.0, step=1000.0)
-
 отдаю = st.selectbox("Отдаю", ["KZT", "USD", "EUR", "RUB"])
+amount = st.number_input(f"Сумма в {отдаю}", value=60000.0, min_value=0.0)
 получаю = st.selectbox("Получаю", ["KZT", "USD", "EUR", "RUB"])
 
 kurs_map = {"KZT": 1.0, "USD": usd, "EUR": eur, "RUB": rub}
 
+if отдаю == получаю:
+    результат = amount
+else:
+    результат = amount * kurs_map[отдаю] / kurs_map[получаю]
+
+st.success(f"Получаю: {результат:.2f} {получаю}")
 if отдаю == получаю:
     результат = amount
 else:
