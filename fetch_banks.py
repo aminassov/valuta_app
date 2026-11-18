@@ -13,7 +13,7 @@ def try_parse(url, headers):
         rows = []
         for tr in soup.find_all("tr"):
             tds = [td.get_text(strip=True) for td in tr.find_all("td")]
-            # Ищем любые строки с курсами 44x.xx
+          
             if len(tds) >= 3 and re.search(r"44\d[\.,]\d+", " ".join(tds)):
                 name = re.sub(r"\s+", " ", tds[0])[:35]
                 if len(name) > 2 and "Обмен" not in name:
@@ -28,7 +28,7 @@ def main():
     headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
     all_rows = []
     
-    # Пробуем 3 открытых источника по очереди
+  
     urls = [
         "https://kurs-tenge.kz/aktau",
         "https://valuta.kz/aktau",
