@@ -1,4 +1,4 @@
-equirementsstreamlit
+streamlit
+pandas
 requests
 beautifulsoup4
-pandas
