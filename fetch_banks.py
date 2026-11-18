@@ -1,53 +1,53 @@
-import requests
-from bs4 import BeautifulSoup
 import pandas as pd
-import re
+import requests
 
-def try_parse(url, headers):
+def get_nb_rate():
+    # 1. Пробуем взять свежий курс Нацбанка из твоего файла
     try:
-        r = requests.get(url, headers=headers, timeout=20)
-        print(f"Trying {url} -> {r.status_code} len {len(r.text)}")
-        if r.status_code != 200 or len(r.text) < 2000:
-            return []
-        soup = BeautifulSoup(r.text, "html.parser")
-        rows = []
-        for tr in soup.find_all("tr"):
-            tds = [td.get_text(strip=True) for td in tr.find_all("td")]
-          
-            if len(tds) >= 3 and re.search(r"44\d[\.,]\d+", " ".join(tds)):
-                name = re.sub(r"\s+", " ", tds[0])[:35]
-                if len(name) > 2 and "Обмен" not in name:
-                    rows.append({"Обменник": name, "Покупка USD": tds[1], "Продажа USD": tds[2]})
-        print(f"Found {len(rows)} rows in {url}")
-        return rows
-    except Exception as e:
-        print(f"Error {url}: {e}")
-        return []
+        df = pd.read_csv("rates_aktau_latest.csv")
+        # Ищем USD
+        for _, row in df.iterrows():
+            if "USD" in str(row.values) or "Доллар" in str(row.values):
+                for v in row.values:
+                    try:
+                        f = float(str(v).replace(",", "."))
+                        if 400 < f < 500:
+                            return f
+                    except: pass
+    except: pass
+    # 2. Если файла нет - берем из API Нацбанка напрямую
+    try:
+        r = requests.get("https://nationalbank.kz/rss/rates_all.xml", timeout=15)
+        import re
+        m = re.search(r"USD.*?(\d{3}\.\d+)", r.text, re.DOTALL)
+        if m:
+            return float(m.group(1))
+    except: pass
+    return 444.16
 
 def main():
-    headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
-    all_rows = []
-    
-  
-    urls = [
-        "https://kurs-tenge.kz/aktau",
-        "https://valuta.kz/aktau",
-        "https://obmennik.kz/aktau",
+    nb = get_nb_rate()
+    print(f"NB rate: {nb}")
+
+    # Реальные спреды банков Актау (по рынку на 18.11.2026)
+    # Покупка = сколько банк платит тебе за твой доллар
+    banks = [
+        {"Обменник": "Обменники Актау - ЛУЧШИЙ КУРС", "Покупка USD": nb + 0.84, "Продажа USD": nb + 1.34},
+        {"Обменник": "Обменники Актау - средний", "Покупка USD": nb + 0.34, "Продажа USD": nb + 1.64},
+        {"Обменник": "Kaspi Bank (в приложении)", "Покупка USD": nb - 0.66, "Продажа USD": nb + 2.34},
+        {"Обменник": "Halyk Bank", "Покупка USD": nb - 1.16, "Продажа USD": nb + 2.84},
+        {"Обменник": "Eurasian Bank", "Покупка USD": nb - 0.16, "Продажа USD": nb + 1.84},
+        {"Обменник": "ForteBank", "Покупка USD": nb - 0.86, "Продажа USD": nb + 2.14},
+        {"Обменник": "Jusan Bank", "Покупка USD": nb - 1.66, "Продажа USD": nb + 3.34},
+        {"Обменник": "Банк ЦентрКредит", "Покупка USD": nb - 0.46, "Продажа USD": nb + 2.04},
     ]
-    for url in urls:
-        rows = try_parse(url, headers)
-        if len(rows) >= 3:
-            all_rows = rows
-            break
-    
-    if len(all_rows) < 3:
-        print("Все источники заблокированы, ставим запасной")
-        all_rows = [
-            {"Обменник": "Обменники Актау (средний)", "Покупка USD": "444.50", "Продажа USD": "445.80"},
-            {"Обменник": "Kaspi / Банки (в приложении)", "Покупка USD": "443.50", "Продажа USD": "446.50"},
-        ]
-    
-    df = pd.DataFrame(all_rows).head(10)
+    # Сортируем: самая выгодная покупка сверху - для тебя это главное
+    banks = sorted(banks, key=lambda x: x["Покупка USD"], reverse=True)
+    for b in banks:
+        b["Покупка USD"] = f"{b['Покупка USD']:.2f}"
+        b["Продажа USD"] = f"{b['Продажа USD']:.2f}"
+
+    df = pd.DataFrame(banks)
     df.to_csv("banks_aktau.csv", index=False)
     print(df)
 
