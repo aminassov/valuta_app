@@ -1,1 +1,4 @@
-
+date,bank,currency,buy,sell,source
+2026-11-18,NBK,USD,444.16,444.16,nationalbank.kz
+2026-11-18,NBK,EUR,487.29,487.29,nationalbank.kz
+2026-11-18,NBK,RUB,5.4,5.4,nationalbank.kz
