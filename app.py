@@ -29,7 +29,7 @@ except:
     usd, eur, rub = 540, 580, 6.5
 
 data = {
-    "Валюта": ["USD 🇺🇸", "EUR 🇪🇺", "RUB 🇷🇺"],
+    "Валюта": ["USD", "EUR", "RUB"],
     "Курс к тенге": [usd, eur, rub]
 }
 df = pd.DataFrame(data)
