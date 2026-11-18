@@ -4,35 +4,40 @@ import pandas as pd
 import re
 
 def get_aktau_rates():
-    try:
-        headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
-        
-        for url in ["https://kurs.kz/aktau", "https://kurs.kz/"]:
-            r = requests.get(url, headers=headers, timeout=15)
+
+    urls_to_try = [
+        "https://api.allorigins.win/raw?url=" + "https://kurs.kz/aktau",
+        "https://kurs.kz/aktau",
+    ]
+    headers = {"User-Agent": "Mozilla/5.0"}
+
+    for url in urls_to_try:
+        try:
+            r = requests.get(url, headers=headers, timeout=20)
+            if r.status_code != 200 or len(r.text) < 1000:
+                continue
             soup = BeautifulSoup(r.text, "html.parser")
-            text = soup.get_text(" ", strip=True)
-            
-           
             rows = []
             for tr in soup.find_all("tr"):
                 tds = [td.get_text(strip=True) for td in tr.find_all("td")]
-                
-                if len(tds) >= 3 and re.search(r"44\d\.\d+", " ".join(tds)):
-                    rows.append({
-                        "Обменник": tds[0][:35],
-                        "Покупка USD": tds[1],
-                        "Продажа USD": tds[2],
-                    })
+                if len(tds) >= 3 and re.search(r"44\d", " ".join(tds)):
+                   
+                    name = re.sub(r"\s+", " ", tds[0])[:35]
+                    if len(name) > 2:
+                        rows.append({
+                            "Обменник": name,
+                            "Покупка USD": tds[1],
+                            "Продажа USD": tds[2],
+                        })
             if len(rows) >= 3:
                 df = pd.DataFrame(rows).head(10)
-                
-                df["sort"] = pd.to_numeric(df["Покупка USD"], errors="coerce")
+                df["sort"] = pd.to_numeric(df["Покупка USD"].str.replace(",", "."), errors="coerce")
                 df = df.sort_values("sort", ascending=False).drop(columns=["sort"])
                 return df
-    except Exception:
-        pass
+        except Exception:
+            continue
 
-   
+  
     return pd.DataFrame([
         {"Обменник": "Обменники Актау (средний)", "Покупка USD": "444.50", "Продажа USD": "445.80"},
         {"Обменник": "Kaspi / Банки (в приложении)", "Покупка USD": "443.50", "Продажа USD": "446.50"},
