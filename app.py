@@ -33,7 +33,7 @@ data = {
     "Курс к тенге": [usd, eur, rub]
 }
 df = pd.DataFrame(data)
-st.dataframe(df, use_container_width=True)
+st.dataframe(df, use_container_width=True, hide_index=True)
 
 # --- 2. КРАСИВЫЙ ДИЗАЙН - ВЫБОР ВАЛЮТЫ ---
 st.divider()
