@@ -1,41 +1,52 @@
 import streamlit as st
 import pandas as pd
-import requests
-import xml.etree.ElementTree as ET
+import os
 
-st.set_page_config(page_title="Конвертер валют", layout="centered")
-st.title("💱 Конвертер валют")
+st.set_page_config(page_title="Конвертер валют Актау", layout="centered")
+st.title("💱 Конвертер валют - Актау")
+rates = {"USD": 540.0, "EUR": 580.0, "RUB": 6.5, "KZT": 1.0}
+date_str = "сегодня"
+is_fallback = False
 
-# --- 1. БЕРЕМ НАСТОЯЩИЙ КУРС С НАЦБАНКА ---
-st.subheader("Курс Нацбанка РК на сегодня")
+file_to_read = None
+if os.path.exists("rates_aktau_latest.csv"):
+    try:
+        tmp = pd.read_csv("rates_aktau_latest.csv")
+        if len(tmp) > 0:
+            file_to_read = "rates_aktau_latest.csv"
+    except:
+        pass
 
-try:
-    url = "https://nationalbank.kz/rss/rates_all.xml"
-    response = requests.get(url, timeout=10)
-    root = ET.fromstring(response.content)
-    
-    rates = {}
-    for item in root.findall(".//item"):
-        title = item.find("title").text  # например "USD"
-        descr = item.find("description").text # например "540.12"
-        rates[title] = float(descr)
-    
-    usd = rates.get("USD", 540)
-    eur = rates.get("EUR", 580)
-    rub = rates.get("RUB", 6.5)
-    st.success("Курс взят с сайта nationalbank.kz - настоящий!")
-except:
-    st.warning("Нет интернета, показываю примерные курсы")
-    usd, eur, rub = 540, 580, 6.5
+if file_to_read is None and os.path.exists("rates_history.csv"):
+    file_to_read = "rates_history.csv"
+    is_fallback = True
+
+if file_to_read:
+    try:
+        df_rates = pd.read_csv(file_to_read)
+        if file_to_read == "rates_history.csv":
+            last_date = df_rates["date"].max()
+            df_rates = df_rates[df_rates["date"] == last_date]
+        for _, row in df_rates.iterrows():
+            cur = str(row["currency"]).strip()
+            val = float(row["buy"])
+            rates[cur] = val
+        if len(df_rates) > 0:
+            date_str = str(df_rates.iloc[0]["date"])
+    except Exception as e:
+        st.warning(f"Не смог прочитать файл с курсами: {e}")
+
+st.subheader(f"Курс Нацбанка РК на {date_str}")
+if is_fallback:
+    st.info("Сегодня Нацбанк не обновился, показываю последний зафиксированный курс")
+else:
+    st.success("Курсы обновляются автоматически каждый день в 09:00 по Актау")
 
 data = {
     "Валюта": ["USD", "EUR", "RUB"],
-    "Курс к тенге": [usd, eur, rub]
+    "Курс к тенге": [rates["USD"], rates["EUR"], rates["RUB"]]
 }
-df = pd.DataFrame(data)
-st.dataframe(df, use_container_width=True, hide_index=True)
-
-# --- 2. КРАСИВЫЙ ДИЗАЙН - ВЫБОР ВАЛЮТЫ ---
+st.dataframe(pd.DataFrame(data), use_container_width=True, hide_index=True)
 st.divider()
 st.markdown("### Калькулятор")
 
@@ -43,12 +54,13 @@ st.markdown("### Калькулятор")
 amount = st.number_input(f"Сумма в {отдаю}", value=300.0, min_value=0.0)
 получаю = st.selectbox("Получаю", ["KZT", "USD", "EUR", "RUB"])
 
-курс = st.number_input(f"Курс 1 {отдаю} = ? {получаю}", value=444.16, help="Вбей курс, который видишь в банке / обменнике")
-
 if отдаю == получаю:
     результат = amount
+    курс_auto = 1.0
 else:
-    результат = amount * курс
+    курс_auto = rates[отдаю] / rates[получаю]
+    результат = amount * курс_auto
 
+st.info(f"Автоматический курс: 1 {отдаю} = {курс_auto:.4f} {получаю}")
 st.success(f"Получаю: {результат:.2f} {получаю}")
-st.caption("Калькулятор считает только по курсу, который ты вбил сам.")
+st.caption(f"Курс Нацбанка на {date_str}. Для точного расчета в обменнике Актау уточняй курс покупки/продажи.")
