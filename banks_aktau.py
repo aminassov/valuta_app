@@ -1,5 +1,7 @@
 import requests, csv, xml.etree.ElementTree as ET
 from datetime import datetime
+import os
+
 rows = []
 today = datetime.now().strftime("%Y-%m-%d")
 try:
@@ -24,8 +26,22 @@ if not rows:
         print(f"Fallback ok: {len(rows)}")
     except Exception as e:
         print(f"Fallback fail: {e}")
+
+# Сохраняем latest как раньше
 with open("rates_aktau_latest.csv", "w", newline="", encoding="utf-8") as f:
     w = csv.DictWriter(f, fieldnames=["date", "bank", "currency", "buy", "sell", "source"])
     w.writeheader()
     w.writerows(rows)
+
+# Дописываем в историю, если сегодня что-то получили
+if rows:
+    exists = os.path.exists("rates_history.csv")
+    with open("rates_history.csv", "a", newline="", encoding="utf-8") as f:
+        w = csv.DictWriter(f, fieldnames=["date", "bank", "currency", "buy", "sell", "source"])
+        if not exists:
+            w.writeheader()
+        w.writerows(rows)
+    print(f"History updated: {len(rows)} rows")
+else:
+    print("No rows, history not changed - keep last fixed rate")
 print(f"Saved {len(rows)} rows")
