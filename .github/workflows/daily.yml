@@ -1,14 +1,8 @@
-    data = get_aktau_rates()
-    df = pd.DataFrame(data)
-    # Сохраняем с датой проверки
-    today = datetime.now().strftime("%Y-%m-%d_%H-%M")
-    df.to_csv(f"rates_aktau_{today}.csv", index=False)
-    df.to_csv("rates_aktau_latest.csv", index=False)
-    print(f"Сохранено {len(df)} банков, {today}")А чтобы проверка была ежедневной автоматически, создаем файл .github/workflows/daily.yml:yamlname: Daily Aktau Rates
-on:
+name: Daily Aktau Rates
+"on":
   schedule:
-    - cron: '0 6 * * *'  # каждый день в 09:00 по Актау (06:00 UTC)
-  workflow_dispatch: # кнопка "запустить вручную"
+    - cron: '0 6 * * *'
+  workflow_dispatch:
 jobs:
   check:
     runs-on: ubuntu-latest
