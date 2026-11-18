@@ -41,16 +41,12 @@ st.subheader("Калькулятор")
 
 amount = st.number_input("Сумма в тенге:", min_value=0.0, value=10000.0, step=1000.0)
 
-choice = st.selectbox("Во что переводим?", ["USD Доллар", "EUR Евро", "RUB Рубль", "Во все сразу"])
+отдаю = st.selectbox("Отдаю", ["KZT", "USD", "EUR", "RUB"])
+получаю = st.selectbox("Получаю", ["KZT", "USD", "EUR", "RUB"])
 
-kurs_map = {"USD Доллар": usd, "EUR Евро": eur, "RUB Рубль": rub}
+kurs_map = {"KZT": 1.0, "USD": usd, "EUR": eur, "RUB": rub}
 
-if choice == "Во все сразу":
-    st.write(f"**{amount} KZT = {amount/usd:.2f} USD**")
-    st.write(f"**{amount} KZT = {amount/eur:.2f} EUR**")
-    st.write(f"**{amount} KZT = {amount/rub:.2f} RUB**")
+if отдаю == получаю:
+    результат = amount
 else:
-    kurs = kurs_map[choice]
-    result = amount / kurs
-    st.success(f"### {amount} KZT = {result:.2f} {choice}")
-    st.caption(f"Посчитано по курсу: 1 {choice} = {kurs} KZT")
+    результат = amount * kurs_map[отдаю] / kurs_map[получаю]
