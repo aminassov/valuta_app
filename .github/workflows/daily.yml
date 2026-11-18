@@ -1,0 +1,21 @@
+name: Daily Aktau Rates
+"on":
+  schedule:
+    - cron: '0 6 * * *'
+  workflow_dispatch:
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install requests beautifulsoup4 pandas
+      - run: python banks_aktau.py
+      - run: |
+          git config user.name "bot"
+          git config user.email "bot@bot.com"
+          git add rates_aktau_latest.csv
+          git commit -m "daily rates" || true
+          git push
