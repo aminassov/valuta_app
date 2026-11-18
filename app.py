@@ -37,21 +37,18 @@ st.dataframe(df, use_container_width=True, hide_index=True)
 
 # --- 2. КРАСИВЫЙ ДИЗАЙН - ВЫБОР ВАЛЮТЫ ---
 st.divider()
-st.subheader("Калькулятор")
+st.markdown("### Калькулятор")
 
 отдаю = st.selectbox("Отдаю", ["KZT", "USD", "EUR", "RUB"])
-amount = st.number_input(f"Сумма в {отдаю}", value=60000.0, min_value=0.0)
+amount = st.number_input(f"Сумма в {отдаю}", value=300.0, min_value=0.0)
 получаю = st.selectbox("Получаю", ["KZT", "USD", "EUR", "RUB"])
 
-kurs_map = {"KZT": 1.0, "USD": usd, "EUR": eur, "RUB": rub}
+курс = st.number_input(f"Курс 1 {отдаю} = ? {получаю}", value=444.16, help="Вбей курс, который видишь в банке / обменнике")
 
 if отдаю == получаю:
     результат = amount
 else:
-    результат = amount * kurs_map[отдаю] / kurs_map[получаю]
+    результат = amount * курс
 
 st.success(f"Получаю: {результат:.2f} {получаю}")
-if отдаю == получаю:
-    результат = amount
-else:
-    результат = amount * kurs_map[отдаю] / kurs_map[получаю]
+st.caption("Калькулятор считает только по курсу, который ты вбил сам.")
