@@ -64,3 +64,13 @@ else:
 st.info(f"Автоматический курс: 1 {отдаю} = {курс_auto:.4f} {получаю}")
 st.success(f"Получаю: {результат:.2f} {получаю}")
 st.caption(f"Курс Нацбанка на {date_str}. Для точного расчета в обменнике Актау уточняй курс покупки/продажи.")
+st.markdown("---")
+st.subheader("🏦 Где выгоднее в Актау - Топ обменников")
+
+try:
+    from banks_aktau import get_aktau_rates
+    df_banks = get_aktau_rates()
+    st.dataframe(df_banks, use_container_width=True, hide_index=True)
+    st.caption("Продаешь USD - смотри на самую высокую ПОКУПКУ. Покупаешь USD - смотри на самую низкую ПРОДАЖУ. Данные: kurs.kz")
+except Exception as e:
+    st.info("Не удалось загрузить курсы обменников, попробуй обновить страницу")
