@@ -19,3 +19,8 @@ jobs:
           git add rates_aktau_latest.csv
           git commit -m "daily rates" || true
           git push
+          git config user.name "bot"
+          git config user.email "bot@bot.com"
+          git add rates_aktau_latest.csv
+          git commit -m "daily rates" || true
+          git push
