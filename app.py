@@ -6,17 +6,17 @@ st.set_page_config(page_title="Курсы Актау", layout="wide")
 if "open_bank" not in st.session_state:
     st.session_state.open_bank = None
 
-# --- ВСПЛЫВАЮЩЕЕ ОКНО КАК У КАМКОМБАНК ---
+
 @st.dialog("Детали пункта обмена", width="large")
 def show_bank_detail(row, mode, amount):
-    # Шапка
+   
     st.markdown(f"### {row['Цвет']} {row['Банк']}")
     st.caption("Офис")
 
     c_left, c_right = st.columns([1.2, 1])
 
     with c_left:
-        # Карта Актау - 2GIS
+        
         map_url = f"https://2gis.kz/aktau/search/{row['Банк']} Актау"
         st.markdown(f"""
         <div style="background:#1E222B; border-radius:12px; padding:10px;">
@@ -70,7 +70,7 @@ def show_bank_detail(row, mode, amount):
         st.session_state.open_bank = None
         st.rerun()
 
-# --- ОСНОВНОЙ ЭКРАН ---
+
 st.markdown("### Сравнивайте лучшие курсы валют в банках Актау на сегодня.")
 
 col1, col2, col3 = st.columns([1.2, 1.2, 1])
@@ -111,7 +111,7 @@ for idx, row in df.iterrows():
         if st.button("Подробнее", key=f"det_{idx}_{row['Банк']}", type="primary"):
             st.session_state.open_bank = row["Банк"]
             st.rerun()
-    # Если нажали Подробнее - открываем окно как у КАМКОМБАНК
+   
     if st.session_state.open_bank == row["Банк"]:
         show_bank_detail(row, mode, amount)
         st.session_state.open_bank = None
