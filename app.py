@@ -29,7 +29,7 @@ rates = {
 c1, c2 = st.columns([1.2, 1])
 
 with c1:
-    st.subheader("Динамика курса >")
+    st.subheader("Динамика курса")
     st.markdown("USD")
     st.markdown(f"## {live:.2f} ₸  ▼ 0,22")
     st.caption(f"1 USD = {live:.2f} KZT | 1 KZT = {inv:.4f} USD")
@@ -51,18 +51,33 @@ with c2:
     st.markdown(f"### {amount:,.2f} {cur_from} = {result:,.2f} {cur_to}")
     st.caption(f"1 {cur_from} = {rates[cur_from]/rates[cur_to]:.4f} {cur_to}")
 
+
 st.divider()
+st.subheader("📍 Где поменять в Актау — карта")
 
-st.subheader("Курс доллара в банках Актау")
 banks = [
-    {"Банк": "Kaspi Bank", "Покупка": live - 1.50, "Продажа": live + 1.80, "Адрес": "мкр 14, Актау"},
-    {"Банк": "Halyk Bank", "Покупка": live - 2.00, "Продажа": live + 2.30, "Адрес": "мкр 29, Актау"},
-    {"Банк": "ForteBank", "Покупка": live - 2.20, "Продажа": live + 2.10, "Адрес": "мкр 4, Актау"},
-    {"Банк": "Jusan Bank", "Покупка": live - 1.70, "Продажа": live + 2.50, "Адрес": "мкр 5, Актау"},
-    {"Банк": "Обменник Актау", "Покупка": live - 0.50, "Продажа": live + 1.20, "Адрес": "мкр 28, Актау"},
+    {"Банк": "Kaspi Bank", "Покупка": live - 1.50, "Продажа": live + 1.80, "Адрес": "мкр 14, Актау", "lat": 43.642, "lon": 51.155},
+    {"Банк": "Halyk Bank", "Покупка": live - 2.00, "Продажа": live + 2.30, "Адрес": "мкр 29, Актау", "lat": 43.658, "lon": 51.168},
+    {"Банк": "ForteBank", "Покупка": live - 2.20, "Продажа": live + 2.10, "Адрес": "мкр 4, Актау", "lat": 43.635, "lon": 51.145},
+    {"Банк": "Jusan Bank", "Покупка": live - 1.70, "Продажа": live + 2.50, "Адрес": "мкр 5, Актау", "lat": 43.639, "lon": 51.150},
+    {"Банк": "Обменник Актау", "Покупка": live - 0.50, "Продажа": live + 1.20, "Адрес": "мкр 28, Актау", "lat": 43.652, "lon": 51.162},
 ]
-st.dataframe(pd.DataFrame(banks), use_container_width=True, hide_index=True)
+df_banks = pd.DataFrame(banks)
+st.dataframe(df_banks[["Банк","Покупка","Продажа","Адрес"]], use_container_width=True, hide_index=True)
 
+st.map(df_banks[["lat","lon"]], zoom=12)
+
+st.markdown("**Построить маршрут от тебя:**")
+for b in banks:
+    col1, col2 = st.columns([3, 1])
+    with col1:
+        st.markdown(f"**{b['Банк']}** — {b['Адрес']}")
+    with col2:
+        url = f"https://www.google.com/maps/search/?api=1&query={b['lat']},{b['lon']}"
+        st.link_button("🗺️ Маршрут", url)
+
+
+st.divider()
 st.subheader("Курсы валют")
 curr = pd.DataFrame([
     ["Доллар", live - 1.80, live + 1.80, live],
