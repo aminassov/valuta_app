@@ -51,8 +51,8 @@ with cc1:
     fig.add_trace(go.Scatter(y=y_plot, mode='lines', line=dict(color='#00E676', width=2), fill='tozeroy', fillcolor='rgba(0,230,118,0.12)'))
     fig.update_layout(paper_bgcolor='#2B2F3A', plot_bgcolor='#2B2F3A', height=160, margin=dict(l=0,r=0,t=5,b=5),
                           xaxis=dict(showgrid=False, showticklabels=False), yaxis=dict(showgrid=False, showticklabels=False, range=[490, 555]))
-        st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
-        st.markdown("<div style='display:flex; justify-content:space-between; color:#9AA0AE; font-size:12px;'><span>март</span><span>апр</span><span>май</span><span>июнь</span><span>июль</span><span>авг</span><span>сент</span><span>окт</span><span>ноя</span></div>", unsafe_allow_html=True)
+    st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
+    st.markdown("<div style='display:flex; justify-content:space-between; color:#9AA0AE; font-size:12px;'><span>март</span><span>апр</span><span>май</span><span>июнь</span><span>июль</span><span>авг</span><span>сент</span><span>окт</span><span>ноя</span></div>", unsafe_allow_html=True)
     st.markdown('</div>', unsafe_allow_html=True)
 
 with c2:
