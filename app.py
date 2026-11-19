@@ -23,47 +23,38 @@ inv = 1 / live
 
 st.set_page_config(page_title="Курсы Актау", layout="wide")
 
-st.markdown("""
-<style>
-.card { background:#2B2F3A; border-radius:16px; padding:20px; }
-.bank-card { background:white; border:1px solid #E5E7EB; border-radius:12px; padding:16px; margin-bottom:10px; }
-</style>
-""", unsafe_allow_html=True)
-
-
 st.markdown("## Курсы валют")
 st.markdown("На данной странице собраны все самые выгодные курсы обмена наличной валюты в Актау. Быстрый подбор по покупке, продаже и месторасположению пунктов обмена. Сравнивайте лучшие курсы валют в банках Актау на сегодня.")
 
 c1, c2 = st.columns([2.2, 1])
+
 with c1:
-    st.markdown('<div class="card">', unsafe_allow_html=True)
     cc1, cc2 = st.columns([1, 1.8])
-    st.markdown(f"<div style='color:#9AA0AE; font-size:14px;'>USD</div><div style='color:white; font-size:30px; font-weight:700;'>{live:.2f} ₸ <span style='color:#FF5252; font-size:16px;'>▼ 0,22</span></div>", unsafe_allow_html=True)
-with cc1:
-    st.markdown("<div style='color:white; font-size:20px; font-weight:600;'>Динамика курса ></div><br><br>", unsafe_allow_html=True)
-        
-    y = [live-32, live-24, live-38, live-45, live-33, live-15, live-8, live-2, live-4, live+4, live, live+1, live]
-    x = np.linspace(0, 1, 120)
-    y_plot = np.interp(x, np.linspace(0, 1, len(y)), y)
-        
-    y_plot = y_plot + np.random.RandomState(1).normal(0, 1.5, len(y_plot))
-    fig = go.Figure()
-    fig.add_trace(go.Scatter(y=y_plot, mode='lines', line=dict(color='#00E676', width=2), fill='tozeroy', fillcolor='rgba(0,230,118,0.12)'))
-    fig.update_layout(paper_bgcolor='#2B2F3A', plot_bgcolor='#2B2F3A', height=160, margin=dict(l=0,r=0,t=5,b=5),
-                          xaxis=dict(showgrid=False, showticklabels=False), yaxis=dict(showgrid=False, showticklabels=False, range=[490, 555]))
-    st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
-    st.markdown("<div style='display:flex; justify-content:space-between; color:#9AA0AE; font-size:12px;'><span>март</span><span>апр</span><span>май</span><span>июнь</span><span>июль</span><span>авг</span><span>сент</span><span>окт</span><span>ноя</span></div>", unsafe_allow_html=True)
-    st.markdown('</div>', unsafe_allow_html=True)
+
+    with cc1:
+        st.markdown("### Динамика курса >")
+        st.markdown(f"USD")
+        st.markdown(f"## {live:.2f} ₸  ▼ 0,22")
+
+    with cc2:
+        y = [live-32, live-24, live-38, live-45, live-33, live-15, live-8, live-2, live-4, live+4, live, live+1, live]
+        x = np.linspace(0, 1, 120)
+        y_plot = np.interp(x, np.linspace(0, 1, len(y)), y)
+        fig = go.Figure()
+        fig.add_trace(go.Scatter(y=y_plot, mode='lines', line=dict(color='#00E676', width=2), fill='tozeroy', fillcolor='rgba(0,230,118,0.12)'))
+        fig.update_layout(height=160, margin=dict(l=0,r=0,t=5,b=5),
+                          xaxis=dict(showgrid=False, showticklabels=False),
+                          yaxis=dict(showgrid=False, showticklabels=False, range=[live-50, live+20]))
+        st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
+        st.caption("март  апр  май  июнь  июль  авг  сент  окт  ноя")
 
 with c2:
-    st.markdown("#### Конвертер валют <span style='font-size:12px; color:#9AA0AE;'>ПО КУРСУ НБ РК</span>", unsafe_allow_html=True)
+    st.markdown("#### Конвертер валют")
     usd = st.number_input("USD", value=1.0, key="c_usd")
     st.markdown("<div style='text-align:center;'>⇅</div>", unsafe_allow_html=True)
-    kzt = st.number_input("KZT", value=usd*544.0, key="c_kzt")
-    st.caption(f"1 USD = 544,00 KZT | 1 KZT = 0,0018 USD")
-    st.caption(f"{usd} USD = {usd*544:,.0f} KZT")
-
-
+    kzt = st.number_input("KZT", value=usd*live, key="c_kzt")
+    st.caption(f"1 USD = {live:.2f} KZT | 1 KZT = {inv:.4f} USD")
+    st.caption(f"{usd} USD = {usd*live:,.0f} KZT")
 st.markdown("## Курс доллара в банках Актау &nbsp;&nbsp; <span style='font-size:14px; color:#9AA0AE;'>на 19.11.2026</span>", unsafe_allow_html=True)
 
 
