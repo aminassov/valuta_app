@@ -2,6 +2,25 @@ import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
 import numpy as np
+mport requests
+
+@st.cache_data(ttl=600)  # обновлять каждые 10 мин
+def get_live_rate():
+    try:
+        # Бесплатный API без ключа
+        r = requests.get("https://open.er-api.com/v6/latest/USD", timeout=5)
+        data = r.json()
+        return float(data["rates"]["KZT"])  # например 449.68
+    except:
+        try:
+            r2 = requests.get("https://api.exchangerate.host/latest?base=USD&symbols=KZT", timeout=5)
+            return float(r2.json()["rates"]["KZT"])
+        except:
+            return 449.68  # запасной, если нет интернета
+
+live = get_live_rate()
+
+inv = 1 / live
 
 st.set_page_config(page_title="Курсы Актау", layout="wide")
 
