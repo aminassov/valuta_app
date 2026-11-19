@@ -3,7 +3,6 @@ import pandas as pd
 
 st.set_page_config(page_title="Курсы Актау", layout="wide")
 
-# --- СТИЛЬ КАК НА СКРИНЕ: тёмный фон, карточки ---
 st.markdown("""
 <style>
 body { background-color: #12141A; }
@@ -38,7 +37,6 @@ body { background-color: #12141A; }
 </style>
 """, unsafe_allow_html=True)
 
-# --- ВЕРХНЯЯ ПАНЕЛЬ КАК НА СКРИНЕ ---
 col1, col2, col3, col4 = st.columns([1.2, 1.2, 1, 1.5])
 with col1:
     mode = st.selectbox("Все курсы", ["Все курсы", "Я покупаю", "Я продаю"])
@@ -50,7 +48,6 @@ with col4:
     st.markdown("<br>", unsafe_allow_html=True)
     show_map = st.checkbox("📍 Пункты обмена на карте")
 
-# --- ФИЛЬТРЫ ---
 f1, f2, f3, f4, f5 = st.columns(5)
 with f1:
     sort_by = st.selectbox("Сортировка", ["Популярные", "Выгодный курс", "Найти рядом"])
@@ -63,9 +60,6 @@ with f4:
 with f5:
     no_fee = st.checkbox("Без комиссии")
 
-# --- ДАННЫЕ: ПОКА ЧТО ИЗ ТВОЕГО banks_aktau.csv ---
-# Потом сюда подключим реальный парсер kurs.kz
-# Формат: Банк | Покупка | Продажа | Адрес | Район | Расстояние | Обновлено | Теги
 data = [
     {"Банк": "Kaspi Bank", "Покупка": 543.20, "Продажа": 545.50, "Адрес": "Офис • мкр 14, Актау", "Район": "мкр 14 • 700 м", "Обновлено": 8, "Теги": ["Есть новые купюры"], "Цвет": "🔴"},
     {"Банк": "Halyk Bank", "Покупка": 542.80, "Продажа": 546.00, "Адрес": "Офис • мкр 29, Актау", "Район": "мкр 29 • 1200 м", "Обновлено": 12, "Теги": ["Можно зарезервировать", "Есть новые купюры"], "Цвет": "🟢"},
@@ -76,17 +70,18 @@ data = [
 
 df = pd.DataFrame(data)
 
-# Фильтры в действии
 if only_reserve:
     df = df[df["Теги"].apply(lambda x: "Можно зарезервировать" in x)]
 if only_new:
     df = df[df["Теги"].apply(lambda x: "Есть новые купюры" in x)]
 
-# Сортировка: если "Я покупаю" - выгодно где дороже покупают, если "Я продаю" - где дешевле продают
+# --- ИСПРАВЛЕННАЯ СОРТИРОВКА ---
+# Я покупаю = ищу где дешевле КУПИТЬ у банка = сортируем по Продаже, по возрастанию
+# Я продаю = ищу где дороже ПРОДАТЬ банку = сортируем по Покупке, по убыванию
 if mode == "Я покупаю":
-    df = df.sort_values("Покупка", ascending=False)
-elif mode == "Я продаю":
     df = df.sort_values("Продажа", ascending=True)
+elif mode == "Я продаю":
+    df = df.sort_values("Покупка", ascending=False)
 else:
     if sort_by == "Выгодный курс":
         df = df.sort_values("Продажа", ascending=True)
@@ -95,11 +90,23 @@ else:
 
 st.markdown(f"**{len(df)} предложений** • Обновлено каждые 30 мин")
 
-# --- КАРТОЧКИ КАК НА СКРИНЕ ---
 for _, row in df.iterrows():
     tags_html = "".join([f'<span class="tag">{t}</span>' for t in row["Теги"]])
-    # Выгода для суммы
-    you_get = int(amount * row["Покупка"]) if mode != "Я продаю" else int(amount * row["Продажа"])
+    
+    # --- ИСПРАВЛЕННЫЙ РАСЧЕТ ---
+    # Если Я покупаю $ -> я плачу тенге по цене Продажи банка, получаю $
+    # Если Я продаю $ -> я отдаю $, получаю тенге по цене Покупки банка
+    if mode == "Я покупаю":
+        # Сколько $ я получу за свои тенге? Пример: у меня 544900 тенге -> получу 1000$
+        you_get = int(amount / row["Продажа"] * 1000) if False else int(amount * row["Покупка"])
+        bottom_text = f"{amount} $ ADD = {int(amount * row['Продажа']):,} ₸ — ты отдаешь {int(amount * row['Продажа']):,} ₸, получаешь {amount} $"
+    elif mode == "Я продаю":
+        you_get = int(amount * row["Покупка"])
+        bottom_text = f"{amount} $ ADD = {you_get:,} ₸ — ты отдаешь {amount} $, получаешь {you_get:,} ₸"
+    else:
+        # По умолчанию показываем как "Я продаю"
+        you_get = int(amount * row["Покупка"])
+        bottom_text = f"{amount} $ ADD = {you_get:,} ₸"
 
     st.markdown(f"""
     <div class="card">
@@ -113,11 +120,11 @@ for _, row in df.iterrows():
         </div>
         <div style="width:20%">
           <div class="label">Я покупаю</div>
-          <div class="buy">{row["Покупка"]:.2f} ₸</div>
+          <div class="buy">{row["Продажа"]:.2f} ₸</div>
         </div>
         <div style="width:20%">
           <div class="label">Я продаю</div>
-          <div class="sell">{row["Продажа"]:.2f} ₸</div>
+          <div class="sell">{row["Покупка"]:.2f} ₸</div>
         </div>
         <div style="width:20%; text-align:right;">
           <div class="label">О банке &gt;</div>
@@ -125,7 +132,7 @@ for _, row in df.iterrows():
         </div>
       </div>
       <div style="display:flex; justify-content:space-between; margin-top:8px;">
-        <div style="font-size:13px; color:#7ED99A;">За {amount} $ вы получите ~ {you_get:,} ₸</div>
+        <div style="font-size:13px; color:#7ED99A;">{bottom_text}</div>
         <div class="updated">Обновлено {row["Обновлено"]} мин. назад</div>
       </div>
     </div>
