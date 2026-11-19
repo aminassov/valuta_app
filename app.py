@@ -2,12 +2,11 @@ import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
 import numpy as np
-mport requests
+import requests
 
 @st.cache_data(ttl=600)  # обновлять каждые 10 мин
 def get_live_rate():
     try:
-        # Бесплатный API без ключа
         r = requests.get("https://open.er-api.com/v6/latest/USD", timeout=5)
         data = r.json()
         return float(data["rates"]["KZT"])  # например 449.68
@@ -39,12 +38,11 @@ c1, c2 = st.columns([2.2, 1])
 with c1:
     st.markdown('<div class="card">', unsafe_allow_html=True)
     cc1, cc2 = st.columns([1, 1.8])
-    with cc1:
-        st.markdown("<div style='color:white; font-size:20px; font-weight:600;'>Динамика курса ></div><br><br>", unsafe_allow_html=True)
-        st.markdown("<div style='color:#9AA0AE; font-size:14px;'>USD</div><div style='color:white; font-size:30px; font-weight:700;'>544,00 ₸ <span style='color:#FF5252; font-size:16px;'>▼ 0,22</span></div>", unsafe_allow_html=True)
-    with cc2:
+    st.markdown(f"<div style='color:#9AA0AE; font-size:14px;'>USD</div><div style='color:white; font-size:30px; font-weight:700;'>{live:.2f} ₸ <span style='color:#FF5252; font-size:16px;'>▼ 0,22</span></div>", unsafe_allow_html=True)
+with cc1:
+    st.markdown("<div style='color:white; font-size:20px; font-weight:600;'>Динамика курса ></div><br><br>", unsafe_allow_html=True)
         
-        y = [512, 520, 505, 498, 510, 528, 535, 542, 540, 548, 544, 545, 544]
+        y = [live-32, live-24, live-38, live-45, live-33, live-15, live-8, live-2, live-4, live+4, live, live+1, live]
         x = np.linspace(0, 1, 120)
         y_plot = np.interp(x, np.linspace(0, 1, len(y)), y)
         
