@@ -3,140 +3,117 @@ import pandas as pd
 
 st.set_page_config(page_title="Курсы Актау", layout="wide")
 
-st.markdown("""
-<style>
-body { background-color: #12141A; }
-.card {
-  background: #1E222B;
-  border-radius: 16px;
-  padding: 16px 20px;
-  margin-bottom: 12px;
-}
-.tag {
-  background: #1A4D2E;
-  color: #7ED99A;
-  border-radius: 6px;
-  padding: 4px 8px;
-  font-size: 12px;
-  margin-right: 6px;
-}
-.buy { font-size: 24px; font-weight: 700; color: white; }
-.sell { font-size: 24px; font-weight: 700; color: white; }
-.label { font-size: 13px; color: #9AA0AE; }
-.addr { font-size: 14px; color: white; }
-.dist { font-size: 13px; color: #9AA0AE; }
-.btn {
-  background: #0095FF;
-  color: white;
-  border-radius: 12px;
-  padding: 8px 16px;
-  font-weight: 600;
-  border: none;
-}
-.updated { font-size: 12px; color: #7A7F8A; text-align: right; }
-</style>
-""", unsafe_allow_html=True)
+if "open_bank" not in st.session_state:
+    st.session_state.open_bank = None
 
-col1, col2, col3, col4 = st.columns([1.2, 1.2, 1, 1.5])
+# --- ВСПЛЫВАЮЩЕЕ ОКНО КАК У КАМКОМБАНК ---
+@st.dialog("Детали пункта обмена", width="large")
+def show_bank_detail(row, mode, amount):
+    # Шапка
+    st.markdown(f"### {row['Цвет']} {row['Банк']}")
+    st.caption("Офис")
+
+    c_left, c_right = st.columns([1.2, 1])
+
+    with c_left:
+        # Карта Актау - 2GIS
+        map_url = f"https://2gis.kz/aktau/search/{row['Банк']} Актау"
+        st.markdown(f"""
+        <div style="background:#1E222B; border-radius:12px; padding:10px;">
+        <a href="{map_url}" target="_blank" style="color:white; text-decoration:none;">
+        <div style="background:#2A2F3A; border-radius:10px; height:180px; display:flex; align-items:center; justify-content:center; font-size:40px;">🗺️<br></div>
+        <div style="font-size:13px; color:#0095FF; margin-top:8px;">📍 Открыть в 2GIS →</div>
+        </a>
+        </div>
+        """, unsafe_allow_html=True)
+        st.markdown(f"**Адрес**<br>{row['Адрес']}", unsafe_allow_html=True)
+        st.markdown(f"📍 **{row['Район']}**")
+        st.link_button("Построить маршрут", map_url)
+        st.markdown(f"🟢 **Открыто до 21:00**<br>ПН-ВС: 09:00-21:00", unsafe_allow_html=True)
+        st.caption(f"🕐 Часы: {row['Часы']}")
+
+    with c_right:
+        # Курсы справа как на скрине
+        st.markdown(f"""
+        <div style="background:#1E222B; border-radius:12px; padding:16px;">
+            <div style="display:flex; gap:20px;">
+                <div>
+                    <div style="color:#9AA0AE; font-size:13px;">Я покупаю</div>
+                    <div style="font-size:24px; font-weight:700; color:white;">{row['Продажа']:.2f} ₸</div>
+                </div>
+                <div>
+                    <div style="color:#9AA0AE; font-size:13px;">Я продаю</div>
+                    <div style="font-size:24px; font-weight:700; color:white;">{row['Покупка']:.2f} ₸</div>
+                </div>
+            </div>
+            <div style="color:#9AA0AE; font-size:13px; margin-top:10px;">🕐 Обновлено {row['Обновлено']} мин. назад</div>
+            <div style="background:#262B36; border-radius:10px; padding:12px; margin-top:12px;">
+                🔔 <b>Не пропустите выгодный курс в приложении</b> >
+            </div>
+            <div style="margin-top:14px;">✅ <b>Бесплатный резерв суммы</b></div>
+            <div style="color:#9AA0AE; font-size:13px;">Банк сохранит нужную сумму для вас до конца дня</div>
+        </div>
+        """, unsafe_allow_html=True)
+
+        if mode == "Я покупаю":
+            total = int(amount * row['Продажа'])
+            st.markdown(f"**{amount} $ ADD = {total:,} ₸**")
+        else:
+            total = int(amount * row['Покупка'])
+            st.markdown(f"**{amount} $ ADD = {total:,} ₸**")
+
+        if st.button("Резервировать сумму", type="primary", use_container_width=True):
+            st.success(f"✅ Готово! {row['Банк']} зарезервировал {amount} $ для вас до конца дня. Перезвонят: {row['Телефон']}")
+        st.link_button(f"📞 {row['Телефон']}", f"tel:{row['Телефон']}")
+
+    if st.button("Закрыть"):
+        st.session_state.open_bank = None
+        st.rerun()
+
+# --- ОСНОВНОЙ ЭКРАН ---
+st.markdown("### Сравнивайте лучшие курсы валют в банках Актау на сегодня.")
+
+col1, col2, col3 = st.columns([1.2, 1.2, 1])
 with col1:
     mode = st.selectbox("Все курсы", ["Все курсы", "Я покупаю", "Я продаю"])
 with col2:
     amount = st.number_input("Сумма", value=1000, step=100)
 with col3:
     currency = st.selectbox("Валюта", ["USD", "EUR", "RUB"])
-with col4:
-    st.markdown("<br>", unsafe_allow_html=True)
-    show_map = st.checkbox("📍 Пункты обмена на карте")
-
-f1, f2, f3, f4, f5 = st.columns(5)
-with f1:
-    sort_by = st.selectbox("Сортировка", ["Популярные", "Выгодный курс", "Найти рядом"])
-with f2:
-    only_new = st.checkbox("Новые и старые купюры")
-with f3:
-    only_reserve = st.checkbox("Есть резерв")
-with f4:
-    only_open = st.checkbox("Открыты сейчас")
-with f5:
-    no_fee = st.checkbox("Без комиссии")
 
 data = [
-    {"Банк": "Kaspi Bank", "Покупка": 543.20, "Продажа": 545.50, "Адрес": "Офис • мкр 14, Актау", "Район": "мкр 14 • 700 м", "Обновлено": 8, "Теги": ["Есть новые купюры"], "Цвет": "🔴"},
-    {"Банк": "Halyk Bank", "Покупка": 542.80, "Продажа": 546.00, "Адрес": "Офис • мкр 29, Актау", "Район": "мкр 29 • 1200 м", "Обновлено": 12, "Теги": ["Можно зарезервировать", "Есть новые купюры"], "Цвет": "🟢"},
-    {"Банк": "ForteBank", "Покупка": 542.50, "Продажа": 545.80, "Адрес": "Офис • мкр 4, Актау", "Район": "мкр 4 • 2000 м", "Обновлено": 7, "Теги": ["Есть новые купюры"], "Цвет": "🟣"},
-    {"Банк": "Jusan Bank", "Покупка": 543.00, "Продажа": 546.20, "Адрес": "Офис • мкр 5, Актау", "Район": "мкр 5 • 900 м", "Обновлено": 15, "Теги": ["Можно зарезервировать"], "Цвет": "🟠"},
-    {"Банк": "Обменник Актау", "Покупка": 544.00, "Продажа": 544.90, "Адрес": "Пункт обмена • Актау", "Район": "мкр 28 • 300 м", "Обновлено": 4, "Теги": ["Есть новые купюры", "Без комиссии"], "Цвет": "🟡"},
+    {"Банк": "Kaspi Bank", "Покупка": 543.20, "Продажа": 545.50, "Адрес": "Офис • мкр 14, Актау", "Район": "мкр 14 • 700 м", "Обновлено": 8, "Теги": ["Есть новые купюры"], "Цвет": "🔴", "Телефон": "+7 727 258 59 89", "Часы": "Пн-Пт 09:00-18:00, Сб 10:00-14:00"},
+    {"Банк": "Halyk Bank", "Покупка": 542.80, "Продажа": 546.00, "Адрес": "Офис • мкр 29, Актау", "Район": "мкр 29 • 1200 м", "Обновлено": 12, "Теги": ["Можно зарезервировать", "Есть новые купюры"], "Цвет": "🟢", "Телефон": "+7 727 259 07 77", "Часы": "Пн-Пт 09:00-17:30"},
+    {"Банк": "Обменник Актау", "Покупка": 544.00, "Продажа": 544.90, "Адрес": "Пункт обмена • мкр 28, Актау", "Район": "мкр 28 • 300 м", "Обновлено": 4, "Теги": ["Есть новые купюры", "Без комиссии", "Обмен старых на новые"], "Цвет": "🟡", "Телефон": "+7 700 123 45 67", "Часы": "Ежедневно 09:00-21:00"},
 ]
-
 df = pd.DataFrame(data)
-
-if only_reserve:
-    df = df[df["Теги"].apply(lambda x: "Можно зарезервировать" in x)]
-if only_new:
-    df = df[df["Теги"].apply(lambda x: "Есть новые купюры" in x)]
-
-# --- ИСПРАВЛЕННАЯ СОРТИРОВКА ---
-# Я покупаю = ищу где дешевле КУПИТЬ у банка = сортируем по Продаже, по возрастанию
-# Я продаю = ищу где дороже ПРОДАТЬ банку = сортируем по Покупке, по убыванию
 if mode == "Я покупаю":
     df = df.sort_values("Продажа", ascending=True)
 elif mode == "Я продаю":
     df = df.sort_values("Покупка", ascending=False)
-else:
-    if sort_by == "Выгодный курс":
-        df = df.sort_values("Продажа", ascending=True)
-    elif sort_by == "Найти рядом":
-        df = df.sort_values("Район")
 
 st.markdown(f"**{len(df)} предложений** • Обновлено каждые 30 мин")
 
-for _, row in df.iterrows():
-    tags_html = "".join([f'<span class="tag">{t}</span>' for t in row["Теги"]])
-    
-    # --- ИСПРАВЛЕННЫЙ РАСЧЕТ ---
-    # Если Я покупаю $ -> я плачу тенге по цене Продажи банка, получаю $
-    # Если Я продаю $ -> я отдаю $, получаю тенге по цене Покупки банка
-    if mode == "Я покупаю":
-        # Сколько $ я получу за свои тенге? Пример: у меня 544900 тенге -> получу 1000$
-        you_get = int(amount / row["Продажа"] * 1000) if False else int(amount * row["Покупка"])
-        bottom_text = f"{amount} $ ADD = {int(amount * row['Продажа']):,} ₸ — ты отдаешь {int(amount * row['Продажа']):,} ₸, получаешь {amount} $"
-    elif mode == "Я продаю":
-        you_get = int(amount * row["Покупка"])
-        bottom_text = f"{amount} $ ADD = {you_get:,} ₸ — ты отдаешь {amount} $, получаешь {you_get:,} ₸"
-    else:
-        # По умолчанию показываем как "Я продаю"
-        you_get = int(amount * row["Покупка"])
-        bottom_text = f"{amount} $ ADD = {you_get:,} ₸"
+for idx, row in df.iterrows():
+    tags = " ".join([f" `{t}` " for t in row["Теги"]])
+    st.markdown(f"{tags}")
+    c1, c2, c3, c4 = st.columns([2.2, 1.1, 1.1, 1.3])
+    with c1:
+        st.markdown(f"**{row['Цвет']} {row['Банк']}**\n\n🏠 {row['Адрес']}\n\n📍 {row['Район']}")
+    with c2:
+        st.caption("Я покупаю")
+        st.markdown(f"### {row['Продажа']:.2f} ₸")
+    with c3:
+        st.caption("Я продаю")
+        st.markdown(f"### {row['Покупка']:.2f} ₸")
+    with c4:
+        st.caption("О банке >")
+        if st.button("Подробнее", key=f"det_{idx}_{row['Банк']}", type="primary"):
+            st.session_state.open_bank = row["Банк"]
+            st.rerun()
+    # Если нажали Подробнее - открываем окно как у КАМКОМБАНК
+    if st.session_state.open_bank == row["Банк"]:
+        show_bank_detail(row, mode, amount)
+        st.session_state.open_bank = None
 
-    st.markdown(f"""
-    <div class="card">
-      <div>{tags_html}</div>
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-top:8px;">
-        <div style="width:30%">
-          <div style="font-size:18px; font-weight:700; color:white;">{row["Цвет"]} {row["Банк"]}</div>
-          <div class="addr" style="margin-top:6px;">🏠 {row["Адрес"]}</div>
-          <div class="dist">🔴 {row["Район"]}</div>
-          <div style="font-size:12px; color:#9AA0AE; margin-top:4px;">Еще пункты обмена ∨</div>
-        </div>
-        <div style="width:20%">
-          <div class="label">Я покупаю</div>
-          <div class="buy">{row["Продажа"]:.2f} ₸</div>
-        </div>
-        <div style="width:20%">
-          <div class="label">Я продаю</div>
-          <div class="sell">{row["Покупка"]:.2f} ₸</div>
-        </div>
-        <div style="width:20%; text-align:right;">
-          <div class="label">О банке &gt;</div>
-          <div style="margin-top:10px;">📍 📞 <button class="btn">Подробнее</button></div>
-        </div>
-      </div>
-      <div style="display:flex; justify-content:space-between; margin-top:8px;">
-        <div style="font-size:13px; color:#7ED99A;">{bottom_text}</div>
-        <div class="updated">Обновлено {row["Обновлено"]} мин. назад</div>
-      </div>
-    </div>
-    """, unsafe_allow_html=True)
-
-st.markdown("---")
 st.caption("Курсы обновляются каждые 30 мин • Актау")
