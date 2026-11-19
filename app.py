@@ -14,10 +14,44 @@ def get_live_rate():
 live = get_live_rate()
 inv = 1 / live
 
+# Базовые курсы НБ РК
+base_rates = {
+    "USD": live,
+    "EUR": live * 1.41,
+    "RUB": live * 0.015,
+    "CNY": live * 0.17,
+    "GBP": live * 1.60,
+    "AED": live * 0.27,
+}
+
+# Спред банка: (покупка - сколько вычитаем, продажа - сколько прибавляем) для каждой валюты
+# Чем меньше спред - тем выгоднее банк
+bank_spread = {
+    "Kaspi Bank": {"USD": (1.5, 1.8), "EUR": (2.0, 2.5), "RUB": (0.20, 0.25), "CNY": (0.50, 0.60), "GBP": (3.0, 3.5), "AED": (0.50, 0.60)},
+    "Halyk Bank": {"USD": (2.0, 2.3), "EUR": (2.5, 3.0), "RUB": (0.25, 0.30), "CNY": (0.60, 0.70), "GBP": (3.5, 4.0), "AED": (0.60, 0.70)},
+    "ForteBank": {"USD": (2.2, 2.1), "EUR": (2.8, 2.8), "RUB": (0.28, 0.28), "CNY": (0.65, 0.65), "GBP": (3.8, 3.8), "AED": (0.65, 0.65)},
+    "Банк ЦентрКредит": {"USD": (1.9, 2.2), "EUR": (2.4, 2.7), "RUB": (0.24, 0.28), "CNY": (0.55, 0.65), "GBP": (3.4, 3.8), "AED": (0.55, 0.65)},
+    "Altyn Bank": {"USD": (1.2, 1.5), "EUR": (1.8, 2.2), "RUB": (0.18, 0.22), "CNY": (0.45, 0.55), "GBP": (2.8, 3.2), "AED": (0.45, 0.55)},
+    "Home Credit Bank": {"USD": (2.1, 2.4), "EUR": (2.6, 3.1), "RUB": (0.26, 0.31), "CNY": (0.62, 0.72), "GBP": (3.6, 4.1), "AED": (0.62, 0.72)},
+    "KZI Bank": {"USD": (2.0, 2.0), "EUR": (2.5, 2.5), "RUB": (0.25, 0.25), "CNY": (0.60, 0.60), "GBP": (3.5, 3.5), "AED": (0.60, 0.60)},
+    "ВТБ Банк": {"USD": (1.8, 2.1), "EUR": (2.3, 2.6), "RUB": (0.15, 0.20), "CNY": (0.55, 0.65), "GBP": (3.3, 3.7), "AED": (0.55, 0.65)},
+    "Bank RBK": {"USD": (1.7, 2.0), "EUR": (2.2, 2.5), "RUB": (0.22, 0.26), "CNY": (0.52, 0.62), "GBP": (3.2, 3.6), "AED": (0.52, 0.62)},
+}
+
+def get_bank_rates(bank_name):
+    rows = []
+    for cur, base in base_rates.items():
+        buy_spread, sell_spread = bank_spread[bank_name][cur]
+        rows.append({
+            "Валюта": cur,
+            "Покупка": round(base - buy_spread, 2),
+            "Продажа": round(base + sell_spread, 2),
+            "Курс НБ РК": round(base, 2),
+        })
+    return pd.DataFrame(rows)
+
 st.set_page_config(page_title="Обмен валют Актау", layout="wide")
 st.title("Обмен валют • Актау")
-
-rates = {"KZT": 1.0, "USD": live, "EUR": live * 1.41, "RUB": live * 0.015, "CNY": live * 0.17, "GBP": live * 1.60, "AED": live * 0.27}
 
 c1, c2 = st.columns([1.2, 1])
 with c1:
@@ -29,18 +63,25 @@ with c2:
     st.subheader("Конвертер валют")
     col_from, col_swap, col_to = st.columns([4, 1, 4])
     with col_from:
-        cur_from = st.selectbox("Из", list(rates.keys()), index=1)
+        cur_from = st.selectbox("Из", list(base_rates.keys()), index=0)
     with col_swap:
         st.markdown("<br>", unsafe_allow_html=True)
         st.markdown("⇅")
     with col_to:
-        cur_to = st.selectbox("В", list(rates.keys()), index=0)
-    amount = st.number_input(f"Сумма в {cur_from}", value=2.0, min_value=0.0, step=1.0)
-    result = amount * rates[cur_from] / rates[cur_to]
+        cur_to = st.selectbox("В", ["KZT"] + list(base_rates.keys()), index=0)
+    amount = st.number_input(f"Сумма в {cur_from}", value=100.0, min_value=0.0, step=1.0)
+    # конвертер по курсу НБ
+    if cur_to == "KZT":
+        result = amount * base_rates[cur_from]
+    elif cur_from == "KZT":
+        result = amount / base_rates[cur_to] if cur_to in base_rates else amount
+    else:
+        result = amount * base_rates[cur_from] / base_rates[cur_to]
     st.markdown(f"### {amount:,.2f} {cur_from} = {result:,.2f} {cur_to}")
 
 st.divider()
-st.subheader("Курсы в банках Актау — нажми на название банка")
+st.subheader("Курсы покупки / продажи в банках Актау — нажми на название банка")
+st.caption("Покупка = банк покупает у тебя валюту | Продажа = банк продаёт тебе валюту | USD / EUR / RUB / CNY / GBP / AED")
 
 kaspi = [
     ("2 мкр, 47В, Актау", "Ежедневно 09:00–18:00", 43.635, 51.168),
@@ -108,61 +149,45 @@ kzi = [
 vtb = [
     ("БЦ Меридиан, 12 мкр, 79/1, Актау", "4.8 ★ 154 оценки | Подтверждён", 43.650, 51.178),
 ]
-# Bank RBK - твой 1 филиал
 rbk = [
     ("Филиал в г. Актау, 13 мкр, 10а, Актау", "4.9 ★ 190 оценок | Подтверждён", 43.651, 51.176),
 ]
 
-offices = []
-for addr, hours, lat, lon in kaspi:
-    offices.append({"Банк": "Kaspi Bank", "Адрес": addr, "Часы": hours, "Покупка": live-1.5, "Продажа": live+1.8, "lat": lat, "lon": lon})
-for addr, hours, lat, lon in halyk:
-    offices.append({"Банк": "Halyk Bank", "Адрес": addr, "Часы": hours, "Покупка": live-2.0, "Продажа": live+2.3, "lat": lat, "lon": lon})
-for addr, hours, lat, lon in forte:
-    offices.append({"Банк": "ForteBank", "Адрес": addr, "Часы": hours, "Покупка": live-2.2, "Продажа": live+2.1, "lat": lat, "lon": lon})
-for addr, hours, lat, lon in bcc:
-    offices.append({"Банк": "Банк ЦентрКредит", "Адрес": addr, "Часы": hours, "Покупка": live-1.9, "Продажа": live+2.2, "lat": lat, "lon": lon})
-for addr, hours, lat, lon in altyn:
-    offices.append({"Банк": "Altyn Bank", "Адрес": addr, "Часы": hours, "Покупка": live-1.2, "Продажа": live+1.5, "lat": lat, "lon": lon})
-for addr, hours, lat, lon in hcb:
-    offices.append({"Банк": "Home Credit Bank", "Адрес": addr, "Часы": hours, "Покупка": live-2.1, "Продажа": live+2.4, "lat": lat, "lon": lon})
-for addr, hours, lat, lon in kzi:
-    offices.append({"Банк": "KZI Bank", "Адрес": addr, "Часы": hours, "Покупка": live-2.0, "Продажа": live+2.0, "lat": lat, "lon": lon})
-for addr, hours, lat, lon in vtb:
-    offices.append({"Банк": "ВТБ Банк", "Адрес": addr, "Часы": hours, "Покупка": live-1.8, "Продажа": live+2.1, "lat": lat, "lon": lon})
-for addr, hours, lat, lon in rbk:
-    offices.append({"Банк": "Bank RBK", "Адрес": addr, "Часы": hours, "Покупка": live-1.7, "Продажа": live+2.0, "lat": lat, "lon": lon})
+all_banks = [
+    ("Kaspi Bank", kaspi),
+    ("Halyk Bank", halyk),
+    ("ForteBank", forte),
+    ("Банк ЦентрКредит", bcc),
+    ("Altyn Bank", altyn),
+    ("Home Credit Bank", hcb),
+    ("KZI Bank", kzi),
+    ("ВТБ Банк", vtb),
+    ("Bank RBK", rbk),
+]
 
-df = pd.DataFrame(offices)
-
-for bank_name, group in df.groupby("Банк"):
-    best_buy = group["Покупка"].max()
-    best_sell = group["Продажа"].min()
-    title = f"{bank_name}  |  Покупка: {best_buy:.2f} ₸  |  Продажа: {best_sell:.2f} ₸  |  {len(group)} отделений"
+for bank_name, lst in all_banks:
+    rates_df = get_bank_rates(bank_name)
+    usd_row = rates_df[rates_df["Валюта"] == "USD"].iloc[0]
+    eur_row = rates_df[rates_df["Валюта"] == "EUR"].iloc[0]
+    rub_row = rates_df[rates_df["Валюта"] == "RUB"].iloc[0]
+    title = f"{bank_name}  |  USD {usd_row['Покупка']:.2f} / {usd_row['Продажа']:.2f}  |  EUR {eur_row['Покупка']:.2f} / {eur_row['Продажа']:.2f}  |  RUB {rub_row['Покупка']:.2f} / {rub_row['Продажа']:.2f}  |  {len(lst)} отделений"
     with st.expander(title):
-        st.map(group[["lat","lon"]], zoom=12)
-        for _, row in group.iterrows():
+        st.markdown(f"**Курсы покупки / продажи в {bank_name}:**")
+        st.dataframe(rates_df, use_container_width=True, hide_index=True)
+        st.markdown("🟢 **Покупка** — банк купит у тебя валюту &nbsp;&nbsp; 🔴 **Продажа** — банк продаст тебе валюту")
+        q_all = urllib.parse.quote(f"{bank_name} Актау")
+        st.link_button(f"🗺️ Показать все отделения {bank_name} на карте", f"https://www.google.com/maps/search/?api=1&query={q_all}", use_container_width=True)
+        for addr, hours, lat, lon in lst:
             with st.container(border=True):
                 c_left, c_right = st.columns([2, 1])
                 with c_left:
-                    st.markdown(f"**{row['Банк']} — {row['Адрес']}**")
-                    st.caption(f"🕒 {row['Часы']}")
-                    st.markdown(f"Покупка: **{row['Покупка']:.2f} ₸**  |  Продажа: **{row['Продажа']:.2f} ₸**")
+                    st.markdown(f"**{bank_name} — {addr}**")
+                    st.caption(f"🕒 {hours}")
+                    st.markdown(f"USD: **{usd_row['Покупка']:.2f} / {usd_row['Продажа']:.2f}** &nbsp;|&nbsp; EUR: **{eur_row['Покупка']:.2f} / {eur_row['Продажа']:.2f}** &nbsp;|&nbsp; RUB: **{rub_row['Покупка']:.2f} / {rub_row['Продажа']:.2f}**")
+                    st.caption(f"CNY: {rates_df[rates_df['Валюта']=='CNY'].iloc[0]['Покупка']:.2f} / {rates_df[rates_df['Валюта']=='CNY'].iloc[0]['Продажа']:.2f} | GBP: {rates_df[rates_df['Валюта']=='GBP'].iloc[0]['Покупка']:.2f} / {rates_df[rates_df['Валюта']=='GBP'].iloc[0]['Продажа']:.2f} | AED: {rates_df[rates_df['Валюта']=='AED'].iloc[0]['Покупка']:.2f} / {rates_df[rates_df['Валюта']=='AED'].iloc[0]['Продажа']:.2f}")
                 with c_right:
-                    q = urllib.parse.quote(row['Адрес'])
+                    q = urllib.parse.quote(addr)
                     url = f"https://www.google.com/maps/search/?api=1&query={q}"
                     st.link_button("🗺️ Маршрут", url, use_container_width=True)
-                    if st.button("Зарезервировать", key=f"{row['Банк']}-{row['Адрес']}", use_container_width=True):
-                        st.success(f"Заявка в {row['Банк']} ({row['Адрес']}) отправлена!")
-
-st.divider()
-st.subheader("Курсы валют")
-curr = pd.DataFrame([
-    ["Доллар", live - 1.80, live + 1.80, live],
-    ["Евро", live * 1.41 - 2, live * 1.41 + 2, live * 1.41],
-    ["Юань", live * 0.17 - 0.5, live * 0.17 + 0.5, live * 0.17],
-    ["Фунт", live * 1.60 - 3, live * 1.60 + 3, live * 1.60],
-    ["Рубль", live * 0.0145, live * 0.0155, live * 0.015],
-    ["Дирхам", live * 0.27 - 0.5, live * 0.27 + 0.5, live * 0.27],
-], columns=["Валюта", "Покупка", "Продажа", "Курс НБ РК 19.11.2026"])
-st.dataframe(curr, use_container_width=True, hide_index=True)
+                    if st.button("Зарезервировать", key=f"{bank_name}-{addr}", use_container_width=True):
+                        st.success(f"Заявка в {bank_name} ({addr}) отправлена!")
