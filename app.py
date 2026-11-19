@@ -17,24 +17,18 @@ st.set_page_config(page_title="Обмен валют Актау", layout="wide")
 st.title("Обмен валют • Актау")
 
 rates = {
-    "KZT": 1.0,
-    "USD": live,
-    "EUR": live * 1.41,
-    "RUB": live * 0.015,
-    "CNY": live * 0.17,
-    "GBP": live * 1.60,
-    "AED": live * 0.27,
+    "KZT": 1.0, "USD": live, "EUR": live * 1.41,
+    "RUB": live * 0.015, "CNY": live * 0.17,
+    "GBP": live * 1.60, "AED": live * 0.27,
 }
 
 c1, c2 = st.columns([1.2, 1])
-
 with c1:
     st.subheader("Динамика курса")
     st.markdown("USD")
     st.markdown(f"## {live:.2f} ₸  ▼ 0,22")
     st.caption(f"1 USD = {live:.2f} KZT | 1 KZT = {inv:.4f} USD")
     st.caption("Курс НБ РК на 19.11.2026 • обновляется каждые 10 мин")
-
 with c2:
     st.subheader("Конвертер валют")
     col_from, col_swap, col_to = st.columns([4, 1, 4])
@@ -45,7 +39,6 @@ with c2:
         st.markdown("⇅")
     with col_to:
         cur_to = st.selectbox("В", list(rates.keys()), index=0)
-
     amount = st.number_input(f"Сумма в {cur_from}", value=2.0, min_value=0.0, step=1.0)
     result = amount * rates[cur_from] / rates[cur_to]
     st.markdown(f"### {amount:,.2f} {cur_from} = {result:,.2f} {cur_to}")
@@ -53,29 +46,51 @@ with c2:
 
 
 st.divider()
-st.subheader("📍 Где поменять в Актау — карта")
+st.subheader("🏦 Офисы банков")
 
-banks = [
-    {"Банк": "Kaspi Bank", "Покупка": live - 1.50, "Продажа": live + 1.80, "Адрес": "мкр 14, Актау", "lat": 43.642, "lon": 51.155},
-    {"Банк": "Halyk Bank", "Покупка": live - 2.00, "Продажа": live + 2.30, "Адрес": "мкр 29, Актау", "lat": 43.658, "lon": 51.168},
-    {"Банк": "ForteBank", "Покупка": live - 2.20, "Продажа": live + 2.10, "Адрес": "мкр 4, Актау", "lat": 43.635, "lon": 51.145},
-    {"Банк": "Jusan Bank", "Покупка": live - 1.70, "Продажа": live + 2.50, "Адрес": "мкр 5, Актау", "lat": 43.639, "lon": 51.150},
-    {"Банк": "Обменник Актау", "Покупка": live - 0.50, "Продажа": live + 1.20, "Адрес": "мкр 28, Актау", "lat": 43.652, "lon": 51.162},
+
+offices = [
+   
+    {"Банк": "Kaspi Bank", "Адрес": "мкр 14, д. 12, Актау", "Часы": "Пн-Вс: 09:00 – 20:00", "Покупка": live-1.5, "Продажа": live+1.8, "lat": 43.652, "lon": 51.175},
+    {"Банк": "Kaspi Bank", "Адрес": "мкр 27, ТЦ Актау, Актау", "Часы": "Пн-Вс: 10:00 – 22:00", "Покупка": live-1.3, "Продажа": live+1.6, "lat": 43.661, "lon": 51.185},
+    {"Банк": "Kaspi Bank", "Адрес": "мкр 29, пр. Абая, Актау", "Часы": "Пн-Сб: 09:00 – 19:00", "Покупка": live-1.6, "Продажа": live+1.9, "lat": 43.665, "lon": 51.190},
+ 
+    {"Банк": "Halyk Bank", "Адрес": "мкр 29, ул. Абая, Актау", "Часы": "Пн-Пт: 09:00 – 18:00", "Покупка": live-2.0, "Продажа": live+2.3, "lat": 43.663, "lon": 51.188},
+    {"Банк": "Halyk Bank", "Адрес": "мкр 8, д. 5, Актау", "Часы": "Пн-Сб: 09:00 – 19:00", "Покупка": live-2.1, "Продажа": live+2.4, "lat": 43.646, "lon": 51.172},
+
+    {"Банк": "ForteBank", "Адрес": "мкр 4, д. 20, Актау", "Часы": "Пн-Пт: 09:00 – 18:00", "Покупка": live-2.2, "Продажа": live+2.1, "lat": 43.640, "lon": 51.170},
+    {"Банк": "ForteBank", "Адрес": "мкр 16, БЦ Актау, Актау", "Часы": "Пн-Вс: 09:00 – 20:00", "Покупка": live-2.0, "Продажа": live+2.0, "lat": 43.655, "lon": 51.178},
+    
+    {"Банк": "Jusan Bank", "Адрес": "мкр 5, д. 8, Актау", "Часы": "Пн-Пт: 09:00 – 18:00", "Покупка": live-1.7, "Продажа": live+2.5, "lat": 43.644, "lon": 51.174},
+   
+    {"Банк": "Обменник Актау", "Адрес": "мкр 28, рынок, Актау", "Часы": "Пн-Вс: 08:00 – 23:00", "Покупка": live-0.5, "Продажа": live+1.2, "lat": 43.658, "lon": 51.182},
 ]
-df_banks = pd.DataFrame(banks)
-st.dataframe(df_banks[["Банк","Покупка","Продажа","Адрес"]], use_container_width=True, hide_index=True)
+df = pd.DataFrame(offices)
 
-st.map(df_banks[["lat","lon"]], zoom=12)
 
-st.markdown("**Построить маршрут от тебя:**")
-for b in banks:
-    col1, col2 = st.columns([3, 1])
-    with col1:
-        st.markdown(f"**{b['Банк']}** — {b['Адрес']}")
-    with col2:
-        url = f"https://www.google.com/maps/search/?api=1&query={b['lat']},{b['lon']}"
-        st.link_button("🗺️ Маршрут", url)
+bank = st.selectbox("Выбери банк — кликни на название:", ["Все банки"] + sorted(df["Банк"].unique().tolist()))
 
+if bank == "Все банки":
+    show = df
+else:
+    show = df[df["Банк"] == bank]
+
+
+st.map(show[["lat","lon"]], zoom=12)
+
+
+for _, row in show.iterrows():
+    with st.container(border=True):
+        c_left, c_right = st.columns([2, 1])
+        with c_left:
+            st.markdown(f"**{row['Адрес']}**")
+            st.caption(f"🕒 {row['Часы']}")
+            st.markdown(f"Покупка: **{row['Покупка']:.2f} ₸** &nbsp;&nbsp; Продажа: **{row['Продажа']:.2f} ₸**")
+        with c_right:
+            url = f"https://www.google.com/maps/search/?api=1&query={row['lat']},{row['lon']}"
+            st.link_button("🗺️ Маршрут", url, use_container_width=True)
+            if st.button("Зарезервировать сумму", key=f"{row['Адрес']}", use_container_width=True):
+                st.success(f"Заявка на {row['Адрес']} отправлена! С тобой свяжутся.")
 
 st.divider()
 st.subheader("Курсы валют")
