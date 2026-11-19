@@ -1,117 +1,75 @@
 import streamlit as st
 import pandas as pd
-import plotly.graph_objects as go
-import numpy as np
 import requests
 
-@st.cache_data(ttl=600)  # обновлять каждые 10 мин
+@st.cache_data(ttl=600)
 def get_live_rate():
     try:
         r = requests.get("https://open.er-api.com/v6/latest/USD", timeout=5)
-        data = r.json()
-        return float(data["rates"]["KZT"])  # например 449.68
+        return float(r.json()["rates"]["KZT"])
     except:
-        try:
-            r2 = requests.get("https://api.exchangerate.host/latest?base=USD&symbols=KZT", timeout=5)
-            return float(r2.json()["rates"]["KZT"])
-        except:
-            return 449.68  # запасной, если нет интернета
+        return 449.68
 
 live = get_live_rate()
-
 inv = 1 / live
 
-st.set_page_config(page_title="Курсы Актау", layout="wide")
+st.set_page_config(page_title="Обмен валют Актау", layout="wide")
+st.title("Обмен валют • Актау")
 
-st.markdown("## Курсы валют")
-st.markdown("На данной странице собраны все самые выгодные курсы обмена наличной валюты в Актау. Быстрый подбор по покупке, продаже и месторасположению пунктов обмена. Сравнивайте лучшие курсы валют в банках Актау на сегодня.")
+rates = {
+    "KZT": 1.0,
+    "USD": live,
+    "EUR": live * 1.41,
+    "RUB": live * 0.015,
+    "CNY": live * 0.17,
+    "GBP": live * 1.60,
+    "AED": live * 0.27,
+}
 
-c1, c2 = st.columns([2.2, 1])
+c1, c2 = st.columns([1.2, 1])
 
 with c1:
-    cc1, cc2 = st.columns([1, 1.8])
-
-    with cc1:
-        st.markdown("### Динамика курса >")
-        st.markdown(f"USD")
-        st.markdown(f"## {live:.2f} ₸  ▼ 0,22")
-
-    with cc2:
-        y = [live-32, live-24, live-38, live-45, live-33, live-15, live-8, live-2, live-4, live+4, live, live+1, live]
-        x = np.linspace(0, 1, 120)
-        y_plot = np.interp(x, np.linspace(0, 1, len(y)), y)
-        fig = go.Figure()
-        fig.add_trace(go.Scatter(y=y_plot, mode='lines', line=dict(color='#00E676', width=2), fill='tozeroy', fillcolor='rgba(0,230,118,0.12)'))
-        fig.update_layout(height=160, margin=dict(l=0,r=0,t=5,b=5),
-                          xaxis=dict(showgrid=False, showticklabels=False),
-                          yaxis=dict(showgrid=False, showticklabels=False, range=[live-50, live+20]))
-        st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
-        st.caption("март  апр  май  июнь  июль  авг  сент  окт  ноя")
+    st.subheader("Динамика курса >")
+    st.markdown("USD")
+    st.markdown(f"## {live:.2f} ₸  ▼ 0,22")
+    st.caption(f"1 USD = {live:.2f} KZT | 1 KZT = {inv:.4f} USD")
+    st.caption("Курс НБ РК на 19.11.2026 • обновляется каждые 10 мин")
 
 with c2:
-    st.markdown("#### Конвертер валют")
-    usd = st.number_input("USD", value=1.0, key="c_usd")
-    st.markdown("<div style='text-align:center;'>⇅</div>", unsafe_allow_html=True)
-    kzt = st.number_input("KZT", value=usd*live, key="c_kzt")
-    st.caption(f"1 USD = {live:.2f} KZT | 1 KZT = {inv:.4f} USD")
-    st.caption(f"{usd} USD = {usd*live:,.0f} KZT")
-st.markdown("## Курс доллара в банках Актау &nbsp;&nbsp; <span style='font-size:14px; color:#9AA0AE;'>на 19.11.2026</span>", unsafe_allow_html=True)
+    st.subheader("Конвертер валют")
+    col_from, col_swap, col_to = st.columns([4, 1, 4])
+    with col_from:
+        cur_from = st.selectbox("Из", list(rates.keys()), index=1)
+    with col_swap:
+        st.markdown("<br>", unsafe_allow_html=True)
+        st.markdown("⇅")
+    with col_to:
+        cur_to = st.selectbox("В", list(rates.keys()), index=0)
 
+    amount = st.number_input(f"Сумма в {cur_from}", value=2.0, min_value=0.0, step=1.0)
+    result = amount * rates[cur_from] / rates[cur_to]
+    st.markdown(f"### {amount:,.2f} {cur_from} = {result:,.2f} {cur_to}")
+    st.caption(f"1 {cur_from} = {rates[cur_from]/rates[cur_to]:.4f} {cur_to}")
 
+st.divider()
+
+st.subheader("Курс доллара в банках Актау")
+banks = [
+    {"Банк": "Kaspi Bank", "Покупка": live - 1.50, "Продажа": live + 1.80, "Адрес": "мкр 14, Актау"},
+    {"Банк": "Halyk Bank", "Покупка": live - 2.00, "Продажа": live + 2.30, "Адрес": "мкр 29, Актау"},
+    {"Банк": "ForteBank", "Покупка": live - 2.20, "Продажа": live + 2.10, "Адрес": "мкр 4, Актау"},
+    {"Банк": "Jusan Bank", "Покупка": live - 1.70, "Продажа": live + 2.50, "Адрес": "мкр 5, Актау"},
+    {"Банк": "Обменник Актау", "Покупка": live - 0.50, "Продажа": live + 1.20, "Адрес": "мкр 28, Актау"},
+]
+st.dataframe(pd.DataFrame(banks), use_container_width=True, hide_index=True)
+
+st.subheader("Курсы валют")
 curr = pd.DataFrame([
-    ["Доллар", 542.80, 545.50, 544.00],
-    ["Евро", 628.10, 633.40, 630.25],
-    ["Юань", 75.20, 77.10, 76.05],
-    ["Фунт", 710.50, 725.30, 718.10],
-    ["Франк", 680.20, 695.40, 688.30],
-    ["Рубль", 6.20, 6.80, 6.50],
-    ["Дирхам", 147.50, 149.80, 148.60],
-    ["Лира", 12.80, 14.20, 13.50],
+    ["Доллар", live - 1.80, live + 1.80, live],
+    ["Евро", live * 1.41 - 2, live * 1.41 + 2, live * 1.41],
+    ["Юань", live * 0.17 - 0.5, live * 0.17 + 0.5, live * 0.17],
+    ["Фунт", live * 1.60 - 3, live * 1.60 + 3, live * 1.60],
+    ["Рубль", live * 0.0145, live * 0.0155, live * 0.015],
+    ["Дирхам", live * 0.27 - 0.5, live * 0.27 + 0.5, live * 0.27],
 ], columns=["Валюта", "Покупка", "Продажа", "Курс НБ РК 19.11.2026"])
 st.dataframe(curr, use_container_width=True, hide_index=True)
-
-
-st.markdown("### Все банки Актау")
-mode = st.segmented_control("Режим", ["Все курсы", "Я покупаю", "Я продаю"], default="Все курсы")
-amount = st.number_input("Сумма", value=1000, step=100)
-
-banks = [
-    {"Банк": "Kaspi Bank", "Покупка": 543.20, "Продажа": 545.50, "Адрес": "Офис • мкр 14, Актау", "Район": "мкр 14 • 700 м", "Теги": ["Можно зарезервировать", "Есть новые купюры"], "Тел": "+7 727 258 59 89"},
-    {"Банк": "Halyk Bank", "Покупка": 542.80, "Продажа": 546.00, "Адрес": "Офис • мкр 29, Актау", "Район": "мкр 29 • 1200 м", "Теги": ["Есть новые купюры"], "Тел": "+7 727 259 07 77"},
-    {"Банк": "ForteBank", "Покупка": 542.50, "Продажа": 545.80, "Адрес": "Офис • мкр 4, Актау", "Район": "мкр 4 • 2000 м", "Теги": ["Есть новые купюры"], "Тел": "+7 717 258 08 08"},
-    {"Банк": "Jusan Bank", "Покупка": 543.00, "Продажа": 546.20, "Адрес": "Офис • мкр 5, Актау", "Район": "мкр 5 • 900 м", "Теги": ["Можно зарезервировать"], "Тел": "+7 771 000 77 11"},
-    {"Банк": "Bank CenterCredit", "Покупка": 542.60, "Продажа": 546.40, "Адрес": "Офис • мкр 28, Актау", "Район": "мкр 28 • 400 м", "Теги": ["Без комиссии"], "Тел": "+7 727 244 30 30"},
-    {"Банк": "Freedom Bank", "Покупка": 543.50, "Продажа": 545.20, "Адрес": "Офис • мкр 27, Актау", "Район": "мкр 27 • 600 м", "Теги": ["Есть новые купюры", "Без комиссии"], "Тел": "+7 777 000 11 22"},
-    {"Банк": "Обменник Актау", "Покупка": 544.00, "Продажа": 544.90, "Адрес": "Пункт обмена • мкр 28, Актау", "Район": "мкр 28 • 300 м", "Теги": ["Есть новые купюры", "Без комиссии"], "Тел": "+7 700 123 45 67"},
-]
-df = pd.DataFrame(banks)
-if mode == "Я покупаю":
-    df = df.sort_values("Продажа")
-elif mode == "Я продаю":
-    df = df.sort_values("Покупка", ascending=False)
-
-st.markdown(f"**{len(df)} предложений** &nbsp; ⇅ Популярные")
-for i, r in df.iterrows():
-    tags = " ".join([f"`{t}`" for t in r["Теги"]])
-    st.markdown(tags)
-    c1, c2, c3, c4 = st.columns([2.2, 1, 1, 1.3])
-    with c1:
-        st.markdown(f"**{r['Банк']}**\n\n🏠 {r['Адрес']}\n\n🔴 {r['Район']}")
-    with c2:
-        st.caption("Я покупаю")
-        st.markdown(f"### {r['Продажа']:.2f} ₸")
-    with c3:
-        st.caption("Я продаю")
-        st.markdown(f"### {r['Покупка']:.2f} ₸")
-    with c4:
-        st.caption("О банке >")
-        st.link_button("📍", f"https://2gis.kz/aktau/search/{r['Банк']} Актау")
-        if st.button("Подробнее", key=f"d_{i}"):
-            st.info(f"{r['Банк']} | {r['Адрес']} | Тел: {r['Тел']} | Открыто до 21:00 | Резерв: {amount} $ = {int(amount*r['Продажа']):,} ₸")
-    if mode == "Я покупаю":
-        st.caption(f"{amount} $ = {int(amount*r['Продажа']):,} ₸ | Обновлено 3 мин. назад")
-    else:
-        st.caption(f"{amount} $ = {int(amount*r['Покупка']):,} ₸ | Обновлено 3 мин. назад")
-    st.divider()
-
-st.caption("Курсы обновляются каждые 30 мин • Актау • Источник: НБ РК")
