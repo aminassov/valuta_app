@@ -58,16 +58,17 @@ else:
 # --- ТАБЛИЦА БАНКОВ ---
 st.divider()
 st.subheader(f"🏦 Банки: {len(df_filtered)}")
+import urllib.parse
 for _, row in df_filtered.iterrows():
     is_center = "CenterCredit" in row["bank"]
-    label = f"🏦 {row['bank']} — {row['district']} • {row['address']} {'✅ проверено в кассе' if is_center else ''}"
+    # Короткое название без дубля: только банк + адрес
+    label = f"🏦 {row['bank']} — {row['address']}{' ✅' if is_center else ''}"
     with st.expander(label, expanded=is_center):
         c1, c2, c3 = st.columns(3)
         c1.write(f"**USD:** {row['USD_buy']} / {row['USD_sell']}")
         c2.write(f"**EUR:** {row['EUR_buy']} / {row['EUR_sell']}")
         c3.write(f"**RUB:** {row['RUB_buy']} / {row['RUB_sell']}")
         st.caption(f"Источник: {row['source']}")
-        q = f"{row['bank']} {row['address']} Актау"
+        q = urllib.parse.quote(f"{row['bank']} {row['address']} Актау")
         st.markdown(f"[📍 Google Maps](https://www.google.com/maps/search/?api=1&query={q}) | [🚕 Яндекс Карты](https://yandex.kz/maps/?text={q})")
-
 st.info("Ссылка не меняется: https://valuta-app-aqtau.streamlit.app/ • Курсы кассы ЦентрКредит обновлены 27.11.2026 в 11:23")
