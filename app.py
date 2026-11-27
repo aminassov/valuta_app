@@ -1,197 +1,52 @@
 import streamlit as st
 import pandas as pd
-import requests
-import urllib.parse
 
-@st.cache_data(ttl=600)
-def get_live_rate():
-    try:
-        r = requests.get("https://open.er-api.com/v6/latest/USD", timeout=5)
-        return float(r.json()["rates"]["KZT"])
-    except:
-        return 449.68
+st.set_page_config(page_title="Валюта Актау", page_icon="💱", layout="wide")
+st.title("💱 Валюта Актау")
+st.caption("Курсы в банках Актау • Маршруты • Обновлено")
 
-live = get_live_rate()
-inv = 1 / live
+# --- Валюта ---
+currencies = ["USD", "EUR", "RUB", "KZT", "CNY", "TRY", "GBP"]
+col1, col2, col3 = st.columns(3)
+with col1:
+    amount = st.number_input("Сумма", value=100.0, min_value=0.0)
+with col2:
+    from_cur = st.selectbox("Из", currencies, index=0)
+with col3:
+    to_cur = st.selectbox("В", currencies, index=3)
 
-base_rates = {
-    "USD": live,
-    "EUR": live * 1.41,
-    "RUB": live * 0.015,
-    "CNY": live * 0.17,
-    "GBP": live * 1.60,
-    "AED": live * 0.27,
-}
+# --- Загрузка банков ---
+try:
+    df = pd.read_csv("banks_aktau.csv")
+except:
+    # демо-данные, если файла нет
+    df = pd.DataFrame([
+        {"bank":"Kaspi Bank","district":"9 мкр","USD_buy":540,"USD_sell":545,"EUR_buy":590,"EUR_sell":595,"address":"9 мкр, 12"},
+        {"bank":"Halyk Bank","district":"14 мкр","USD_buy":539,"USD_sell":546,"EUR_buy":589,"EUR_sell":596,"address":"14 мкр, 5"},
+        {"bank":"ForteBank","district":"27 мкр","USD_buy":541,"USD_sell":544,"EUR_buy":591,"EUR_sell":594,"address":"27 мкр, 3"},
+        {"bank":"Jusan Bank","district":"8 мкр","USD_buy":538,"USD_sell":547,"EUR_buy":588,"EUR_sell":597,"address":"8 мкр, 20"},
+        {"bank":"Bank CenterCredit","district":"11 мкр","USD_buy":540,"USD_sell":545,"EUR_buy":590,"EUR_sell":595,"address":"11 мкр, 8"},
+        {"bank":"Eurasian Bank","district":"29 мкр","USD_buy":539,"USD_sell":546,"EUR_buy":589,"EUR_sell":596,"address":"29 мкр, 15"},
+        {"bank":"Home Credit","district":"15 мкр","USD_buy":538,"USD_sell":547,"EUR_buy":588,"EUR_sell":597,"address":"15 мкр, 2"},
+    ])
 
-bank_spread = {
-    "Kaspi Bank": {"USD": (1.5, 1.8), "EUR": (2.0, 2.5), "RUB": (0.20, 0.25), "CNY": (0.50, 0.60), "GBP": (3.0, 3.5), "AED": (0.50, 0.60)},
-    "Halyk Bank": {"USD": (2.0, 2.3), "EUR": (2.5, 3.0), "RUB": (0.25, 0.30), "CNY": (0.60, 0.70), "GBP": (3.5, 4.0), "AED": (0.60, 0.70)},
-    "ForteBank": {"USD": (2.2, 2.1), "EUR": (2.8, 2.8), "RUB": (0.28, 0.28), "CNY": (0.65, 0.65), "GBP": (3.8, 3.8), "AED": (0.65, 0.65)},
-    "Банк ЦентрКредит": {"USD": (1.9, 2.2), "EUR": (2.4, 2.7), "RUB": (0.24, 0.28), "CNY": (0.55, 0.65), "GBP": (3.4, 3.8), "AED": (0.55, 0.65)},
-    "Altyn Bank": {"USD": (1.2, 1.5), "EUR": (1.8, 2.2), "RUB": (0.18, 0.22), "CNY": (0.45, 0.55), "GBP": (2.8, 3.2), "AED": (0.45, 0.55)},
-    "Home Credit Bank": {"USD": (2.1, 2.4), "EUR": (2.6, 3.1), "RUB": (0.26, 0.31), "CNY": (0.62, 0.72), "GBP": (3.6, 4.1), "AED": (0.62, 0.72)},
-    "KZI Bank": {"USD": (2.0, 2.0), "EUR": (2.5, 2.5), "RUB": (0.25, 0.25), "CNY": (0.60, 0.60), "GBP": (3.5, 3.5), "AED": (0.60, 0.60)},
-    "ВТБ Банк": {"USD": (1.8, 2.1), "EUR": (2.3, 2.6), "RUB": (0.15, 0.20), "CNY": (0.55, 0.65), "GBP": (3.3, 3.7), "AED": (0.55, 0.65)},
-    "Bank RBK": {"USD": (1.7, 2.0), "EUR": (2.2, 2.5), "RUB": (0.22, 0.26), "CNY": (0.52, 0.62), "GBP": (3.2, 3.6), "AED": (0.52, 0.62)},
-}
+# --- Фильтр по микрорайону ---
+districts = ["Все"] + sorted(df["district"].astype(str).unique().tolist()) if "district" in df.columns else ["Все"]
+sel_district = st.selectbox("Фильтр по микрорайону", districts)
+if sel_district != "Все":
+    df = df[df["district"].astype(str) == sel_district]
 
-bank_phone = {
-    "Kaspi Bank": "Не указан",
-    "Halyk Bank": "+7 800 080-00-59",
-    "ForteBank": "8 (7272) 58-35-55",
-    "Банк ЦентрКредит": "Не указан",
-    "Altyn Bank": "Не указан",
-    "Home Credit Bank": "Не указан",
-    "KZI Bank": "+7 (7292) 20-49-33",
-    "ВТБ Банк": "Не указан",
-    "Bank RBK": "Не указан",
-}
+st.subheader(f"Банки: {len(df)}")
+for _, row in df.iterrows():
+    bank = row.get("bank","Банк")
+    addr = row.get("address","Актау")
+    district = row.get("district","")
+    with st.expander(f"🏦 {bank} — {district} • {addr}"):
+        st.write(f"**Адрес:** {addr}, Актау")
+        # Показываем курсы если есть
+        st.write(row.to_dict())
+        # Маршруты
+        q = f"{bank} {addr} Актау"
+        st.markdown(f"[📍 Google Maps](https://www.google.com/maps/search/?api=1&query={q}) | [🚕 Яндекс Карты](https://yandex.kz/maps/?text={q})")
 
-def get_bank_rates(bank_name):
-    rows = []
-    for cur, base in base_rates.items():
-        buy_spread, sell_spread = bank_spread[bank_name][cur]
-        rows.append({"Валюта": cur, "Покупка": round(base - buy_spread, 2), "Продажа": round(base + sell_spread, 2), "Курс НБ РК": round(base, 2)})
-    return pd.DataFrame(rows)
-
-st.set_page_config(page_title="Обмен валют Актау", layout="wide")
-st.title("Обмен валют • Актау")
-
-c1, c2 = st.columns([1.2, 1])
-with c1:
-    st.subheader("Динамика курса")
-    st.markdown("USD")
-    st.markdown(f"## {live:.2f} ₸  ▼ 0,22")
-    st.caption(f"1 USD = {live:.2f} KZT | 1 KZT = {inv:.4f} USD")
-with c2:
-    st.subheader("Конвертер валют")
-    col_from, col_swap, col_to = st.columns([4, 1, 4])
-    with col_from:
-        cur_from = st.selectbox("Из", list(base_rates.keys()), index=0)
-    with col_swap:
-        st.markdown("<br>", unsafe_allow_html=True)
-        st.markdown("⇅")
-    with col_to:
-        cur_to = st.selectbox("В", ["KZT"] + list(base_rates.keys()), index=0)
-    amount = st.number_input(f"Сумма в {cur_from}", value=100.0, min_value=0.0, step=1.0)
-    if cur_to == "KZT":
-        result = amount * base_rates[cur_from]
-    elif cur_from == "KZT":
-        result = amount / base_rates[cur_to] if cur_to in base_rates else amount
-    else:
-        result = amount * base_rates[cur_from] / base_rates[cur_to]
-    st.markdown(f"### {amount:,.2f} {cur_from} = {result:,.2f} {cur_to}")
-
-st.divider()
-st.subheader("Курсы покупки / продажи в банках Актау — нажми на название банка")
-st.caption("Покупка = банк покупает у тебя валюту | Продажа = банк продаёт тебе валюту | USD / EUR / RUB / CNY / GBP / AED")
-
-kaspi = [
-    ("Банк, ТЦ Metropolis, 28 мкр, 10 к1, Актау", "4.9 ★ 1255 оценок | Ежедневно 09:00–18:00", 43.660, 51.185),
-    ("Банк, ЖК Көркем, 11 мкр, 58, Актау", "4.9 ★ 843 оценки | Ежедневно 09:00–18:00", 43.648, 51.175),
-    ("Банк, БЦ Медет, 2 мкр, 47В, Актау", "4.9 ★ 379 оценок | Ежедневно 09:00–18:00", 43.635, 51.168),
-    ("Офис, Акимат г. Актау, 4 мкр, 72, Актау", "4.5 ★ 86 оценок | Обслуживание юр. лиц", 43.640, 51.172),
-    ("Банк, мкр Самал, 20/1, Жанаозен", "4.8 ★ 136 оценок", 43.340, 51.150),
-]
-halyk = [
-    ("Банк, 14 мкр, 74, Актау", "4.8 ★ 793 оценки | Операционное отделение №14 4.3 ★ 130 оценок | Откроется в 09:00", 43.652, 51.176),
-    ("Банк, 27 мкр, 67/1, Актау", "4.9 ★ 892 оценки | Откроется в 09:00", 43.659, 51.184),
-    ("Банк, 31А мкр, 14, Актау", "4.9 ★ 458 оценок | Откроется в 09:00", 43.668, 51.192),
-    ("Банк, 5 мкр, 5Б, Актау", "4.9 ★ 368 оценок | Откроется в 09:00", 43.638, 51.173),
-    ("Банк, ЖК Оазис, 15 мкр, 69, Актау", "4.8 ★ 213 оценок | Откроется в 09:00", 43.654, 51.179),
-    ("Банк, 28А мкр, 14, Актау", "4.9 ★ 260 оценок | Откроется в 09:00", 43.662, 51.186),
-    ("Банк, ТЦ Алатау, 2 мкр, 55, Актау", "4.3 ★ 201 оценка | Откроется в 09:00", 43.634, 51.167),
-    ("Банк, 28А мкр, 17, Актау", "4.6 ★ 28 оценок | Откроется в 09:00", 43.662, 51.186),
-    ("Банк, 9 мкр, д.6, Актау", "4.8 ★ | +7 800 080-00-59", 43.642, 51.170),
-    ("Банк, 3 мкр, 9, Актау", "Круглосуточно", 43.636, 51.170),
-    ("Банк, 27 мкр, 79, Актау", "Откроется в 09:00", 43.659, 51.184),
-    ("Банк, 8 мкр, 28/2, Актау", "Круглосуточно", 43.645, 51.171),
-    ("Банк, 3 мкр, 141, Актау", "Открыто до 23:00", 43.637, 51.171),
-    ("Банк, 10 мкр, 1, Актау", "Круглосуточно", 43.647, 51.173),
-    ("Банк, с. Атамекен, Каламкас 693/3, Актау", "Круглосуточно", 43.670, 51.195),
-    ("Банк, 27 мкр, 90, Актау", "Круглосуточно", 43.660, 51.185),
-    ("Банк, 19 мкр, 5, Актау", "Открыто до 23:00", 43.656, 51.180),
-    ("Банк, 28 мкр, 31, Актау", "Круглосуточно", 43.661, 51.186),
-    ("Банк, 33 мкр, 181, Актау", "Открыто до 23:00", 43.670, 51.195),
-    ("Банк, 15 мкр, зд.67Б, Актау", "+7 800 080-00-59", 43.653, 51.178),
-    ("Банкомат: Морской торговый порт, 6, Актау", "Банкомат Halyk", 43.630, 51.160),
-]
-forte = [
-    ("Филиал, 12 мкр, 22/2, 1 этаж, Актау", "Пн–Пт 09:00–18:00, Сб 10:00–14:00 | Пандус, банкомат, обмен валют, физ.лица, карты, кредиты, вклады, переводы", 43.651, 51.177),
-    ("Отделение, ЖК Royal House, 19 мкр, 5, Актау", "Пн–Пт 09:00–18:00, Сб 10:00–14:00", 43.656, 51.180),
-    ("Отделение, 16 мкр, 4, Актау", "Пн–Пт 09:00–18:00, Сб 10:00–14:00 | До 22:00", 43.655, 51.178),
-    ("Точка, 9 мкр, 23/2, Актау", "Круглосуточно | Уточняйте формат работы точки перед визитом", 43.642, 51.171),
-    ("Банкомат: 2 мкр, 47А, Актау", "Круглосуточно", 43.635, 51.168),
-    ("Банкомат: мкр Толкын, 228, Актау", "Круглосуточно", 43.665, 51.190),
-    ("Банкомат: 28 мкр, 70/1, Актау", "Круглосуточно", 43.662, 51.187),
-    ("Банкомат: 26 мкр, 71/3, Актау", "Круглосуточно", 43.658, 51.182),
-    ("Банкомат: 29 мкр, 221, Актау", "Круглосуточно", 43.664, 51.189),
-    ("Банкомат: 5 мкр, 1, Актау", "Круглосуточно", 43.638, 51.173),
-    ("Банкомат: ул. Сункар, 9, Актау", "Круглосуточно", 43.657, 51.181),
-    ("Банкомат: 12 мкр, 22/2, Актау", "Круглосуточно | При филиале", 43.651, 51.177),
-]
-bcc = [
-    ("Центральное отделение №0112, 26 мкр, 16, Актау", "4.8 ★ 553 оценки", 43.658, 51.182),
-    ("Отделение №0512, ТРЦ Байтерек, 27 мкр, 90, Актау", "4.9 ★ 384 оценки", 43.660, 51.185),
-    ("Отделение №0212, ЖК Ақеспе, 17 мкр, 95, Актау", "4.8 ★ 297 оценок", 43.656, 51.180),
-    ("Отделение №0412, 4 мкр, 70/3, Актау", "4.8 ★ 282 оценки", 43.640, 51.172),
-]
-altyn = [
-    ("Филиал в г. Актау, Holiday Inn Aktau-City Centre, 4 мкр, 73, Актау", "4.9 ★ 1157 оценок | Подтверждён", 43.641, 51.170),
-]
-hcb = [
-    ("Банк, 12 мкр, 73, Актау", "4.9 ★ 245 оценок", 43.650, 51.177),
-    ("Банк, БЦ Алтын Орда, 29 мкр, 228, Актау", "4.6 ★ 128 оценок", 43.664, 51.189),
-    ("Банк, 6 мкр, 35, Актау", "4.3 ★ 74 оценки", 43.643, 51.174),
-]
-# === KZI BANK - ОБНОВЛЕНО ПО 2ГИС ===
-kzi = [
-    ("Филиал в Актау, БЦ Zodiac, 17 мкр, 39, 1 этаж, Актау", "4.5 ★ 95 оценок | Пн-Пт 09:00-17:00, перерыв 13:00-14:00 | +7 (7292) 20-49-33 | Обмен валют, ячейки, ипотека, банкомат | 2 филиала в Актау", 43.656, 51.180),
-    ("Банкомат, БЦ Zodiac, 17 мкр, 39, Актау", "4.5 ★ 95 оценок | Банкомат KZI Bank", 43.656, 51.180),
-]
-vtb = [
-    ("Банк, БЦ Меридиан, 12 мкр, 79/1, Актау", "4.8 ★ 154 оценки | Подтверждён", 43.650, 51.178),
-]
-rbk = [
-    ("Филиал в г. Актау, 13 мкр, 10а, Актау", "4.9 ★ 190 оценок | Подтверждён", 43.651, 51.176),
-]
-
-all_banks = [
-    ("Kaspi Bank", kaspi),
-    ("Halyk Bank", halyk),
-    ("ForteBank", forte),
-    ("Банк ЦентрКредит", bcc),
-    ("Altyn Bank", altyn),
-    ("Home Credit Bank", hcb),
-    ("KZI Bank", kzi),
-    ("ВТБ Банк", vtb),
-    ("Bank RBK", rbk),
-]
-
-for bank_name, lst in all_banks:
-    rates_df = get_bank_rates(bank_name)
-    usd_row = rates_df[rates_df["Валюта"] == "USD"].iloc[0]
-    eur_row = rates_df[rates_df["Валюта"] == "EUR"].iloc[0]
-    rub_row = rates_df[rates_df["Валюта"] == "RUB"].iloc[0]
-    title = f"{bank_name}  |  USD {usd_row['Покупка']:.2f} / {usd_row['Продажа']:.2f}  |  EUR {eur_row['Покупка']:.2f} / {eur_row['Продажа']:.2f}  |  RUB {rub_row['Покупка']:.2f} / {rub_row['Продажа']:.2f}  |  {len(lst)} отделений"
-    with st.expander(title):
-        st.markdown(f"**Курсы покупки / продажи в {bank_name}:**")
-        st.dataframe(rates_df, use_container_width=True, hide_index=True)
-        st.markdown("🟢 **Покупка** — банк купит у тебя валюту &nbsp;&nbsp; 🔴 **Продажа** — банк продаст тебе валюту")
-        st.markdown(f"📞 **Телефон:** {bank_phone[bank_name]}")
-        q_all = urllib.parse.quote(f"{bank_name} Актау")
-        st.link_button(f"🗺️ Показать все отделения {bank_name} на карте", f"https://www.google.com/maps/search/?api=1&query={q_all}", use_container_width=True)
-        for addr, hours, lat, lon in lst:
-            with st.container(border=True):
-                c_left, c_right = st.columns([2, 1])
-                with c_left:
-                    st.markdown(f"**{bank_name} — {addr}**")
-                    st.caption(f"🕒 {hours} | 📞 {bank_phone[bank_name]}")
-                    st.markdown(f"USD: **{usd_row['Покупка']:.2f} / {usd_row['Продажа']:.2f}** &nbsp;|&nbsp; EUR: **{eur_row['Покупка']:.2f} / {eur_row['Продажа']:.2f}** &nbsp;|&nbsp; RUB: **{rub_row['Покупка']:.2f} / {rub_row['Продажа']:.2f}**")
-                    st.caption(f"CNY: {rates_df[rates_df['Валюта']=='CNY'].iloc[0]['Покупка']:.2f} / {rates_df[rates_df['Валюта']=='CNY'].iloc[0]['Продажа']:.2f} | GBP: {rates_df[rates_df['Валюта']=='GBP'].iloc[0]['Покупка']:.2f} / {rates_df[rates_df['Валюта']=='GBP'].iloc[0]['Продажа']:.2f} | AED: {rates_df[rates_df['Валюта']=='AED'].iloc[0]['Покупка']:.2f} / {rates_df[rates_df['Валюта']=='AED'].iloc[0]['Продажа']:.2f}")
-                with c_right:
-                    q = urllib.parse.quote(f"{bank_name} {addr}")
-                    url = f"https://www.google.com/maps/search/?api=1&query={q}"
-                    st.link_button("🗺️ Маршрут", url, use_container_width=True)
-                    if st.button("Зарезервировать", key=f"{bank_name}-{addr}", use_container_width=True):
-                        st.success(f"Заявка в {bank_name} ({addr}) отправлена!")
+st.info("Ссылка не меняется: https://valuta-app-aqtau.streamlit.app/")
